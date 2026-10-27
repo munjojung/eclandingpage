@@ -141,6 +141,7 @@
     <div class="title">English Community</div>
     <div class="subtitle" id="subText">- 영어 언어교환 문의하기 -</div>
     
+    <!-- CORS 우회를 위한 숨김 아이프레임 -->
     <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
 
     <form id="contactForm" action="https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9" method="POST" target="hidden_iframe">
@@ -217,7 +218,7 @@
             </div>
         </div>
 
-        <!-- Make.com 수신용 필드: Name용 요약 정보 & 전화번호 전용 필드 -->
+        <!-- Make.com 전송용 히든 필드: Name용 전체 요약 문자열 & 단독 phone 필드 -->
         <input type="hidden" id="userRequest_utterance" name="userRequest[utterance]">
         <input type="hidden" id="phone_field" name="phone">
 
@@ -246,7 +247,7 @@
             optLvl3: '고급/자유대화 (Advanced)',
             labelTime: '참여 희망 방식 및 시간대 (중복 가능)',
             txtOffline: '오프라인 낮 (11:00 ~ 13:00)',
-            txtOnline: '온라인 저녁 (20:00 ~ 21:30)',
+            txtOnline: '온라인 저녁 (20:00 ~ 9:30)',
             labelLoc: '오프라인 희망 지역 (오프라인 선택 시)',
             optLoc1: '유성구 (궁동/봉명/도안 등)',
             optLoc2: '서구 (둔산/월평 등)',
@@ -338,11 +339,11 @@
         const locVal = document.getElementById('location').value;
         const refVal = document.getElementById('referrer').value.trim() || 'Direct';
 
-        // 1. Name 컬럼용 전체 문자열
+        // 1. Name 컬럼에 들어갈 전체 요약 문자열 조합
         const combinedData = `${nameVal} | ${phoneVal} | [${roleVal}] | Lvl:${levelVal} | Time:${timeVal} | Loc:${locVal} | Ref:${refVal}`;
         document.getElementById('userRequest_utterance').value = combinedData;
 
-        // 2. 전화번호 컬럼용 순수 phone 값
+        // 2. 전화번호 컬럼에 단독으로 들어갈 phone 값 명시적 할당
         document.getElementById('phone_field').value = phoneVal;
 
         const t = translations[currentLang];
