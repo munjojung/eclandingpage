@@ -113,10 +113,10 @@
         const nameVal = document.getElementById('name').value.trim();
         const phoneVal = document.getElementById('phone').value.trim();
         
-        // 노션 DB 양식 및 기존 파서에 맞게 "홍길동 010-4560-2938" 형태로 결합
+        // 기존 Notion 모듈이 기대하는 "이름 전화번호" 형태 조합
         const combinedData = `${nameVal} ${phoneVal}`;
 
-        // 👉 여기에 Make.com에서 복사하신 Webhook URL을 넣어주세요!
+        // Make.com Webhook URL
         const webhookUrl = 'https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9';
 
         try {
@@ -124,10 +124,9 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    text: combinedData,
-                    utterance: combinedData,
-                    name: nameVal,
-                    phone: phoneVal
+                    userRequest: {
+                        utterance: combinedData
+                    }
                 })
             });
 
