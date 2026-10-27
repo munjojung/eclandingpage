@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESL 문의 관리자 페이지</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, sans-serif; }
+        body { background-color: #f4f6f9; margin: 0; padding: 25px; }
+        .container { max-width: 1280px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        h1 { font-size: 22px; color: #333; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 암호 입력 팝업 */
+        #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .auth-card { background: white; padding: 30px; border-radius: 12px; text-align: center; width: 340px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .auth-card h3 { margin-bottom: 15px; color: #ff5e62; }
+        .auth-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; text-align: center; }
+        .auth-card button { width: 100%; padding: 12px; background: #ff5e62; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        
+        /* 테이블 스타일 */
+        .table-wrapper { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
+        th { background: #f8fafc; font-weight: 700; color: #475569; }
+        td input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
+        td input:focus { border-color: #ff5e62; outline: none; }
+        
+        .btn { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; margin-right: 2px; }
+        .btn-edit { background: #22c55e; color: white; }
+        .btn-edit:hover { background: #16a34a; }
+        .btn-del { background: #ef4444; color: white; }
+        .btn-del:hover { background: #dc2626; }
+        .btn-refresh { background: #3b82f6; color: white; padding: 8px 16px; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div id="authOverlay">
+    <div class="auth-card">
+        <h3>🔑 관리자 로그인</h3>
+        <p style="font-size: 12px; color: #666;">관리자 비밀번호를 입력해 주세요.</p>
+        <input type="password" id="adminPasswordInput" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter') authenticate()">
+        <button onclick="authenticate()">접속하기</button>
+    </div>
+</div>
+
+<div class="container">
+    <h1>
+        <span>📋 ESL 문의 관리 시스템</span>
+        <button class="btn btn-refresh" onclick="fetchInquiries()">새로고침 🔄</button>
+    </h1>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 45px;">ID</th>
+                    <th>이름</th>
+                    <th>전화번호/카톡</th>
+                    <th>구분 (역할)</th>
+                    <th>수준</th>
+                    <th>희망 시간대</th>
+                    <th>희망 지역</th>
+                    <th>추천인</th>
+                    <th>신청일시</th>
+                    <th style="width: 115px;">관리</th>
+                </tr>
+            </thead>
+            <tbody id="inquiryTableBody">
+                <tr><td colspan="10" style="text-align:center; padding: 30px;">로그인 후 문의 데이터가 표시됩니다.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let adminToken = '';
+
+    function authenticate() {
+        const pwd = document.getElementById('adminPasswordInput').value.trim();
+        if (!pwd) return alert('비밀번호를 입력하세요.');
+        adminToken = pwd;
+        fetchInquiries();
+    }
+
+    async function fetchInquiries() {
+        try {
+            const res = await fetch('/api/admin', {
+                headers: { 'Authorization': `Bearer ${adminToken}` }
+            });
+            const result = await res.json();
+
+            if (res.ok && result.success) {
+                document.getElementById('authOverlay').style.display = 'none';
+                renderTable(result.data);
+            } else {
+                alert(result.error || '비밀번호가 올바르지 않습니다.');
+            }
+        } catch (err) {
+            alert('서버 통신 중 오류가 발생했습니다.');
+        }
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('inquiryTableBody');
+        tbody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px;">등록된 문의 내역이 없습니다.</td></tr>';
+            return;
+        }
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            const dateStr = new Date(row.created_at).toLocaleString('ko-KR');
+
+            tr.innerHTML = `
+                <td><b>${row.id}</b></td>
+                <td><input type="text" value="${row.name || ''}" id="name-${row.id}"></td>
+                <td><input type="text" value="${row.phone || ''}" id="phone-${row.id}"></td>
+                <td><input type="text" value="${row.role || ''}" id="role-${row.id}"></td>
+                <td><input type="text" value="${row.level || ''}" id="level-${row.id}"></td>
+                <td><input type="text" value="${row.preferred_time || ''}" id="time-${row.id}"></td>
+                <td><input type="text" value="${row.location || ''}" id="loc-${row.id}"></td>
+                <td><input type="text" value="${row.referrer || ''}" id="ref-${row.id}"></td>
+                <td><small style="color:#64748b;">${dateStr}</small></td>
+                <td>
+                    <button class="btn btn-edit" onclick="updateRow(${row.id})">저장</button>
+                    <button class="btn btn-del" onclick="deleteRow(${row.id})">삭제</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function updateRow(id) {
+        const payload = {
+            id,
+            name: document.getElementById(`name-${id}`).value,
+            phone: document.getElementById(`phone-${id}`).value,
+            role: document.getElementById(`role-${id}`).value,
+            level: document.getElementById(`level-${id}`).value,
+            preferred_time: document.getElementById(`time-${id}`).value,
+            location: document.getElementById(`loc-${id}`).value,
+            referrer: document.getElementById(`ref-${id}`).value
+        };
+
+        try {
+            const res = await fetch('/api/admin', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success) {
+                alert(`[ID: ${id}] 정보가 성공적으로 수정되었습니다.`);
+            } else {
+                alert('수정 실패: ' + result.error);
+            }
+        } catch (err) {
+            alert('수정 요청 중 오류가 발생했습니다.');
+        }
+    }
+
+    async function deleteRow(id) {
+        if (!confirm(`정말로 ID ${id}번 문의 데이터를 삭제하시겠습니까?`)) return;
+
+        try {
+            const res = await fetch('/api/admin', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                },
+                body: JSON.stringify({ id })
+            });
+
+            const result = await res.json();
+            if (res.ok && result.success) {
+                alert('삭제되었습니다.');
+                fetchInquiries();
+            } else {
+                alert('삭제 실패: ' + result.error);
+            }
+        } catch (err) {
+            alert('삭제 요청 중 오류가 발생했습니다.');
+        }
+    }
+</script>
+</body>
+</html>
