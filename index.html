@@ -141,10 +141,8 @@
     <div class="title">English Community</div>
     <div class="subtitle" id="subText">- 영어 언어교환 문의하기 -</div>
     
-    <!-- CORS 우회를 위한 숨김 아이프레임 -->
-    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
-
-    <form id="contactForm" action="https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9" method="POST" target="hidden_iframe">
+    <!-- Neon 서버리스 API로 직접 비동기 전송하므로 action/target 제거 -->
+    <form id="contactForm">
         <!-- 1. 이름 -->
         <div class="form-group">
             <label for="name" id="labelName">이름</label>
@@ -218,10 +216,6 @@
             </div>
         </div>
 
-        <!-- Make.com 전송용 히든 필드: Name용 전체 요약 문자열 & 단독 phone 필드 -->
-        <input type="hidden" id="userRequest_utterance" name="userRequest[utterance]">
-        <input type="hidden" id="phone_field" name="phone">
-
         <button type="submit" class="submit-btn" id="submitBtn">언어교환 문의하기 ✨</button>
     </form>
 </div>
@@ -256,7 +250,8 @@
             placeholderRef: '추천인 이름 (선택사항)',
             txtPrivacy: '[필수] 입력 정보는 언어교환 매칭 안내 목적으로만 활용됩니다.',
             submitBtn: '언어교환 문의하기 ✨',
-            successMsg: '문의 등록이 성공적으로 완료되었습니다!'
+            successMsg: '문의 등록이 성공적으로 완료되었습니다!',
+            errorMsg: '제출 중 오류가 발생했습니다. 다시 시도해 주세요.'
         },
         en: {
             langBtn: 'KO',
@@ -284,7 +279,8 @@
             placeholderRef: 'Name of the person who invited you',
             txtPrivacy: '[Required] Your contact details will strictly be used for coordination & matching.',
             submitBtn: 'Apply for Language Exchange ✨',
-            successMsg: 'Your inquiry has been successfully submitted!'
+            successMsg: 'Your inquiry has been successfully submitted!',
+            errorMsg: 'An error occurred. Please try again.'
         }
     };
 
@@ -325,7 +321,10 @@
         document.getElementById('submitBtn').innerText = t.submitBtn;
     }
 
-    document.getElementById('contactForm').addEventListener('submit', function(e) {
+    // 폼 제출 시 백엔드 API(`/api/submit`)로 데이터 전송
+    document.getElementById('contactForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
         const nameVal = document.getElementById('name').value.trim();
         const phoneVal = document.getElementById('phone_input').value.trim();
         const roleVal = document.getElementById('role').value;
@@ -339,19 +338,45 @@
         const locVal = document.getElementById('location').value;
         const refVal = document.getElementById('referrer').value.trim() || 'Direct';
 
-        // 1. Name 컬럼에 들어갈 전체 요약 문자열 조합
-        const combinedData = `${nameVal} | ${phoneVal} | [${roleVal}] | Lvl:${levelVal} | Time:${timeVal} | Loc:${locVal} | Ref:${refVal}`;
-        document.getElementById('userRequest_utterance').value = combinedData;
-
-        // 2. 전화번호 컬럼에 단독으로 들어갈 phone 값 명시적 할당
-        document.getElementById('phone_field').value = phoneVal;
+        // 서버로 전송할 페이로드 구성
+        const formData = {
+            name: nameVal,
+            phone: phoneVal,
+            role: roleVal,
+            level: levelVal,
+            preferred_time: timeVal,
+            location: locVal,
+            referrer: refVal,
+            funnel_path: '웹폼'
+        };
 
         const t = translations[currentLang];
-        
-        setTimeout(function() {
-            alert(t.successMsg);
-            document.getElementById('contactForm').reset();
-        }, 500);
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true; // 중복 제출 방지
+
+        try {
+            const response = await fetch('/api/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                alert(t.successMsg);
+                document.getElementById('contactForm').reset();
+            } else {
+                alert(`${t.errorMsg} (${result.error || 'Unknown'})`);
+            }
+        } catch (err) {
+            console.error('Network Error:', err);
+            alert(t.errorMsg);
+        } finally {
+            submitBtn.disabled = false;
+        }
     });
 </script>
 

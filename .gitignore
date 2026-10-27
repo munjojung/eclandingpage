@@ -1,0 +1,5 @@
+node_modules/
+html백업/
+.env
+.DS_Store
+Thumbs.db
