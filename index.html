@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Community</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+        body {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* 밝고 명랑한 오렌지-핑크-옐로 톤의 그라데이션 배경 */
+            background: linear-gradient(135deg, #ff9966 0%, #ff5e62 50%, #ffbb33 100%);
+        }
+        .card {
+            background-color: #ffffff;
+            width: 90%;
+            max-width: 420px;
+            padding: 45px 35px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+            text-align: center;
+        }
+        .title {
+            font-size: 30px;
+            font-weight: 800;
+            color: #ff5e62;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #555555;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #333333;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            border-color: #ff5e62;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            /* 활기차고 경쾌한 코랄-오렌지 그라데이션 버튼 */
+            background: linear-gradient(90deg, #ff7e5f 0%, #feb47b 100%);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 126, 95, 0.4);
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+        }
+        .submit-btn:hover {
+            opacity: 0.95;
+            box-shadow: 0 6px 20px rgba(255, 126, 95, 0.5);
+        }
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="title">English Community</div>
+    <div class="subtitle">- 영어 언어교환 문의하기 -</div>
+    <form id="contactForm">
+        <div class="form-group">
+            <label for="phone">휴대폰번호</label>
+            <input type="tel" id="phone" placeholder="01012345678" required>
+        </div>
+        <button type="submit" class="submit-btn">언어교환 문의하기 ✨</button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('contactForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const phone = document.getElementById('phone').value;
+
+        // 사용 중이신 Make.com Webhook URL 입력
+        const webhookUrl = 'https://hook.eu1.make.com/YOUR_WEBHOOK_ID';
+
+        try {
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ utterance: phone })
+            });
+
+            if (response.ok) {
+                alert('문의 등록이 완료되었습니다!');
+                document.getElementById('phone').value = '';
+            } else {
+                alert('등록 중 오류가 발생했습니다.');
+            }
+        } catch (error) {
+            alert('통신 오류가 발생했습니다.');
+        }
+    });
+</script>
+
+</body>
+</html>
