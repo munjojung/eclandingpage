@@ -250,8 +250,7 @@
             txtPrivacy: '[필수] 입력 정보는 언어교환 매칭 안내 목적으로만 활용됩니다.',
             submitBtn: '언어교환 문의하기 ✨',
             successMsg: '문의 등록이 성공적으로 완료되었습니다!',
-            errorMsg: '등록 중 오류가 발생했습니다.',
-            networkError: '통신 오류가 발생했습니다.'
+            errorMsg: '등록 중 오류가 발생했습니다.'
         },
         en: {
             langBtn: 'KO',
@@ -280,8 +279,7 @@
             txtPrivacy: '[Required] Your contact details will strictly be used for coordination & matching.',
             submitBtn: 'Apply for Language Exchange ✨',
             successMsg: 'Your inquiry has been successfully submitted!',
-            errorMsg: 'An error occurred during submission.',
-            networkError: 'Network communication error.'
+            errorMsg: 'An error occurred during submission.'
         }
     };
 
@@ -322,7 +320,7 @@
         document.getElementById('submitBtn').innerText = t.submitBtn;
     }
 
-    document.getElementById('contactForm').addEventListener('submit', async function(e) {
+    document.getElementById('contactForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
         const nameVal = document.getElementById('name').value.trim();
@@ -338,30 +336,20 @@
         const locVal = document.getElementById('location').value;
         const refVal = document.getElementById('referrer').value.trim() || 'Direct';
 
+        // Notion Name 속성으로 매핑될 전체 텍스트
         const combinedData = `${nameVal} | ${phoneVal} | [${roleVal}] | Lvl:${levelVal} | Time:${timeVal} | Loc:${locVal} | Ref:${refVal}`;
 
         const t = translations[currentLang];
         const webhookUrl = 'https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9';
 
-        try {
-            await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                mode: 'no-cors',
-                body: JSON.stringify({
-                    userRequest: {
-                        utterance: combinedData
-                    }
-                })
-            });
+        // Image 오브젝트를 통한 비동기 Beacon 픽셀 전송 (CORS 제약 완전 우회)
+        const img = new Image();
+        const encodedData = encodeURIComponent(combinedData);
+        img.src = `${webhookUrl}?userRequest[utterance]=${encodedData}&_t=${new Date().getTime()}`;
 
-            alert(t.successMsg);
-            document.getElementById('contactForm').reset();
-
-        } catch (error) {
-            console.error('Error:', error);
-            alert(t.networkError);
-        }
+        // 성공 안내 및 폼 초기화
+        alert(t.successMsg);
+        document.getElementById('contactForm').reset();
     });
 </script>
 
