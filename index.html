@@ -330,7 +330,6 @@
         const roleVal = document.getElementById('role').value;
         const levelVal = document.getElementById('level').value;
         
-        // 시간대 체크박스 조합
         let times = [];
         if (document.getElementById('timeOffline').checked) times.push(document.getElementById('timeOffline').value);
         if (document.getElementById('timeOnline').checked) times.push(document.getElementById('timeOnline').value);
@@ -339,16 +338,16 @@
         const locVal = document.getElementById('location').value;
         const refVal = document.getElementById('referrer').value.trim() || 'Direct';
 
-        // Notion 'Name' 필드로 전송될 단일 조합 텍스트 (기존 Notion/Make.com 매핑 유지)
         const combinedData = `${nameVal} | ${phoneVal} | [${roleVal}] | Lvl:${levelVal} | Time:${timeVal} | Loc:${locVal} | Ref:${refVal}`;
 
         const t = translations[currentLang];
         const webhookUrl = 'https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9';
 
         try {
-            const response = await fetch(webhookUrl, {
+            await fetch(webhookUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain' },
+                mode: 'no-cors',
                 body: JSON.stringify({
                     userRequest: {
                         utterance: combinedData
@@ -356,12 +355,9 @@
                 })
             });
 
-            if (response.ok) {
-                alert(t.successMsg);
-                document.getElementById('contactForm').reset();
-            } else {
-                alert(t.errorMsg);
-            }
+            alert(t.successMsg);
+            document.getElementById('contactForm').reset();
+
         } catch (error) {
             console.error('Error:', error);
             alert(t.networkError);
