@@ -95,8 +95,12 @@
     <div class="subtitle">- 영어 언어교환 문의하기 -</div>
     <form id="contactForm">
         <div class="form-group">
+            <label for="name">이름</label>
+            <input type="text" id="name" placeholder="홍길동" required>
+        </div>
+        <div class="form-group">
             <label for="phone">휴대폰번호</label>
-            <input type="tel" id="phone" placeholder="01012345678" required>
+            <input type="tel" id="phone" placeholder="010-4560-2938" required>
         </div>
         <button type="submit" class="submit-btn">언어교환 문의하기 ✨</button>
     </form>
@@ -105,25 +109,36 @@
 <script>
     document.getElementById('contactForm').addEventListener('submit', async function(e) {
         e.preventDefault();
-        const phone = document.getElementById('phone').value;
+        
+        const nameVal = document.getElementById('name').value.trim();
+        const phoneVal = document.getElementById('phone').value.trim();
+        
+        // 노션 DB 양식 및 기존 파서에 맞게 "홍길동 010-4560-2938" 형태로 결합
+        const combinedData = `${nameVal} ${phoneVal}`;
 
-        // 사용 중이신 Make.com Webhook URL 입력
-        const webhookUrl = 'https://hook.eu1.make.com/YOUR_WEBHOOK_ID';
+        // Make.com의 Integration Webhooks, Notion 시나리오에서 복사한 Webhook URL을 넣으세요.
+        const webhookUrl = 'https://hook.eu1.make.com/YOUR_WEBHOOK_URL';
 
         try {
             const response = await fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ utterance: phone })
+                body: JSON.stringify({
+                    text: combinedData,
+                    utterance: combinedData,
+                    name: nameVal,
+                    phone: phoneVal
+                })
             });
 
             if (response.ok) {
-                alert('문의 등록이 완료되었습니다!');
-                document.getElementById('phone').value = '';
+                alert('문의 등록이 성공적으로 완료되었습니다!');
+                document.getElementById('contactForm').reset();
             } else {
                 alert('등록 중 오류가 발생했습니다.');
             }
         } catch (error) {
+            console.error('Error:', error);
             alert('통신 오류가 발생했습니다.');
         }
     });
