@@ -2,7 +2,6 @@ import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL);
-  
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234!'; 
 
   const authHeader = req.headers['authorization'];
@@ -11,13 +10,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. 목록 조회 (GET)
+    const { type } = req.query; // 'inquiries' 또는 'meetups' 구분
+
+    // 1. 밋업 그룹 조회 (GET /api/admin?type=meetups)
+    if (req.method === 'GET' && type === 'meetups') {
+      const today = new Date().toISOString().slice(0, 10);
+      const rows = await sql`SELECT * FROM esl_meetup_groups WHERE date = ${today} ORDER BY group_no ASC;`;
+      return res.status(200).json({ success: true, data: rows });
+    }
+
+    // 2. 일반 문의 목록 조회 (GET /api/admin)
     if (req.method === 'GET') {
       const rows = await sql`SELECT * FROM esl_inquiries ORDER BY created_at DESC;`;
       return res.status(200).json({ success: true, data: rows });
     }
 
-    // 2. 일괄 데이터 추가 (POST - CSV 업로드용)
+    // 3. 일괄 데이터 추가 (POST - CSV 업로드용)
     if (req.method === 'POST') {
       const { items } = req.body;
       if (!items || !Array.isArray(items) || items.length === 0) {
@@ -33,8 +41,25 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: '성공적으로 등록되었습니다.' });
     }
 
-    // 3. 정보 수정 (PUT)
+    // 4. 정보 수정 (PUT)
     if (req.method === 'PUT') {
+      const { target } = req.body;
+
+      // 4-1. 밋업 그룹 수정 (팀원 재배치)
+      if (target === 'meetup') {
+        const { id, facilitator, members } = req.body;
+        if (!id) return res.status(400).json({ error: '그룹 ID가 필요합니다.' });
+
+        const updated = await sql`
+          UPDATE esl_meetup_groups 
+          SET facilitator=${facilitator}, members=${members}
+          WHERE id=${id}
+          RETURNING *;
+        `;
+        return res.status(200).json({ success: true, data: updated[0] });
+      }
+
+      // 4-2. 일반 문의 정보 수정
       const { id, name, phone, role, level, preferred_time, location, referrer } = req.body;
       if (!id) return res.status(400).json({ error: 'ID가 필요합니다.' });
 
@@ -48,7 +73,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, data: updated[0] });
     }
 
-    // 4. 항목 삭제 (DELETE)
+    // 5. 항목 삭제 (DELETE)
     if (req.method === 'DELETE') {
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: 'ID가 필요합니다.' });

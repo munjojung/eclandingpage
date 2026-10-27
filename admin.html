@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESL 문의 관리자 페이지</title>
+    <title>ESL 문의 및 밋업 관리자 페이지</title>
     <style>
         * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, sans-serif; }
         body { background-color: #f4f6f9; margin: 0; padding: 25px; }
@@ -11,11 +11,15 @@
         h1 { font-size: 22px; color: #333; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .header-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         
-        /* 검색창 스타일 */
+        /* 탭 메뉴 스타일 */
+        .tab-menu { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .tab-btn { padding: 8px 16px; border: none; background: #e2e8f0; color: #475569; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .tab-btn.active { background: #3b82f6; color: white; }
+
         .search-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 200px; }
         .search-input:focus { border-color: #3b82f6; outline: none; }
 
-        /* 암호 입력 팝업 */
+        /* 로그인 오버레이 */
         #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .auth-card { background: white; padding: 30px; border-radius: 12px; text-align: center; width: 340px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .auth-card h3 { margin-bottom: 15px; color: #ff5e62; }
@@ -26,25 +30,19 @@
         .table-wrapper { overflow-x: auto; margin-top: 15px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
-        th { background: #f8fafc; font-weight: 700; color: #475569; cursor: pointer; user-select: none; }
-        th:hover { background: #f1f5f9; }
-        td input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
-        td input:focus { border-color: #ff5e62; outline: none; }
+        th { background: #f8fafc; font-weight: 700; color: #475569; cursor: pointer; }
+        td input, td textarea { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
+        td textarea { resize: vertical; height: 50px; }
         
         .btn { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; margin-right: 2px; }
         .btn-edit { background: #22c55e; color: white; }
-        .btn-edit:hover { background: #16a34a; }
         .btn-del { background: #ef4444; color: white; }
-        .btn-del:hover { background: #dc2626; }
         .btn-refresh { background: #3b82f6; color: white; padding: 8px 12px; font-size: 13px; }
-        .btn-csv { background: #84cc16; color: white; padding: 8px 12px; font-size: 13px; }
-        .btn-csv:hover { background: #65a30d; }
-        .btn-upload { background: #f59e0b; color: white; padding: 8px 12px; font-size: 13px; }
-        .btn-upload:hover { background: #d97706; }
         .btn-logout { background: #64748b; color: white; padding: 8px 12px; font-size: 13px; }
-        .btn-logout:hover { background: #475569; }
         
         .stats-info { font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: 500; }
+        .section-view { display: none; }
+        .section-view.active { display: block; }
     </style>
 </head>
 <body>
@@ -60,59 +58,98 @@
 
 <div class="container">
     <h1>
-        <span>📋 ESL 문의 관리 시스템</span>
+        <span>📋 ESL 통합 관리 시스템</span>
         <div class="header-controls">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 검색..." oninput="filterTable()">
-            <button class="btn btn-csv" onclick="downloadCSV()">다운로드 📥</button>
-            <button class="btn btn-upload" onclick="document.getElementById('csvFileInput').click()">업로드 📤</button>
-            <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="uploadCSV(event)">
-            <button class="btn btn-refresh" onclick="fetchInquiries()">새로고침 🔄</button>
+            <button class="btn btn-refresh" onclick="loadCurrentView()">새로고침 🔄</button>
             <button class="btn btn-logout" onclick="logout()">로그아웃 🔒</button>
         </div>
     </h1>
-    <div class="stats-info" id="statsInfo">총 문의 건수: 0건</div>
 
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 45px;" onclick="sortTable(0)">ID ↕</th>
-                    <th onclick="sortTable(1)">이름 ↕</th>
-                    <th onclick="sortTable(2)">전화번호/카톡 ↕</th>
-                    <th onclick="sortTable(3)">구분 (역할) ↕</th>
-                    <th onclick="sortTable(4)">수준 ↕</th>
-                    <th onclick="sortTable(5)">희망 시간대 ↕</th>
-                    <th onclick="sortTable(6)">희망 지역 ↕</th>
-                    <th onclick="sortTable(7)">추천인 ↕</th>
-                    <th onclick="sortTable(8)">신청일시 ↕</th>
-                    <th style="width: 115px;">관리</th>
-                </tr>
-            </thead>
-            <tbody id="inquiryTableBody">
-                <tr><td colspan="10" style="text-align:center; padding: 30px;">로그인 후 문의 데이터가 표시됩니다.</td></tr>
-            </tbody>
-        </table>
+    <div class="tab-menu">
+        <button class="tab-btn active" id="tabInquiries" onclick="switchTab('inquiries')">📋 전체 문의 관리</button>
+        <button class="tab-btn" id="tabMeetups" onclick="switchTab('meetups')">👥 오늘의 밋업 그룹 관리</button>
+    </div>
+
+    <!-- 1. 문의 관리 섹션 -->
+    <div id="viewInquiries" class="section-view active">
+        <div class="stats-info" id="statsInquiries">총 문의 건수: 0건</div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>이름</th>
+                        <th>전화번호/카톡</th>
+                        <th>구분</th>
+                        <th>수준</th>
+                        <th>희망 시간</th>
+                        <th>희망 지역</th>
+                        <th>추천인</th>
+                        <th>신청일시</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBodyInquiries">
+                    <tr><td colspan="10" style="text-align:center; padding: 30px;">데이터를 불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 2. 밋업 그룹 관리 섹션 -->
+    <div id="viewMeetups" class="section-view">
+        <div class="stats-info" id="statsMeetups">오늘 매칭된 그룹: 0개 팀</div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">그룹번호</th>
+                        <th>날짜</th>
+                        <th style="width: 200px;">퍼실리테이터 (Host)</th>
+                        <th>팀원 명단 (수정 가능)</th>
+                        <th style="width: 80px;">관리</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBodyMeetups">
+                    <tr><td colspan="5" style="text-align:center; padding: 30px;">데이터를 불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
     let adminToken = '';
-    let globalData = [];
+    let currentTab = 'inquiries';
+    let inquiriesData = [];
+    let meetupsData = [];
 
     function authenticate() {
         const pwd = document.getElementById('adminPasswordInput').value.trim();
         if (!pwd) return alert('비밀번호를 입력하세요.');
         adminToken = pwd;
-        fetchInquiries();
+        document.getElementById('authOverlay').style.display = 'none';
+        loadCurrentView();
     }
 
     function logout() {
         adminToken = '';
-        globalData = [];
         document.getElementById('adminPasswordInput').value = '';
         document.getElementById('authOverlay').style.display = 'flex';
-        document.getElementById('inquiryTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px;">로그인 후 문의 데이터가 표시됩니다.</td></tr>';
-        document.getElementById('statsInfo').innerText = '총 문의 건수: 0건';
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.getElementById('tabInquiries').classList.toggle('active', tab === 'inquiries');
+        document.getElementById('tabMeetups').classList.toggle('active', tab === 'meetups');
+        document.getElementById('viewInquiries').classList.toggle('active', tab === 'inquiries');
+        document.getElementById('viewMeetups').classList.toggle('active', tab === 'meetups');
+        loadCurrentView();
+    }
+
+    function loadCurrentView() {
+        if (currentTab === 'inquiries') fetchInquiries();
+        else fetchMeetups();
     }
 
     async function fetchInquiries() {
@@ -121,35 +158,26 @@
                 headers: { 'Authorization': `Bearer ${adminToken}` }
             });
             const result = await res.json();
-
             if (res.ok && result.success) {
-                document.getElementById('authOverlay').style.display = 'none';
-                globalData = result.data;
-                filterTable();
+                inquiriesData = result.data;
+                renderInquiries(inquiriesData);
             } else {
-                alert(result.error || '비밀번호가 올바르지 않습니다.');
+                alert(result.error || '인증 실패');
                 document.getElementById('authOverlay').style.display = 'flex';
             }
         } catch (err) {
-            alert('서버 통신 중 오류가 발생했습니다.');
+            alert('서버 통신 오류');
         }
     }
 
-    function renderTable(data) {
-        const tbody = document.getElementById('inquiryTableBody');
+    function renderInquiries(data) {
+        const tbody = document.getElementById('tableBodyInquiries');
         tbody.innerHTML = '';
-
-        document.getElementById('statsInfo').innerText = `총 문의 건수: ${data.length}건`;
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px;">검색 결과가 없거나 등록된 문의 내역이 없습니다.</td></tr>';
-            return;
-        }
+        document.getElementById('statsInquiries').innerText = `총 문의 건수: ${data.length}건`;
 
         data.forEach(row => {
             const tr = document.createElement('tr');
             const dateStr = new Date(row.created_at).toLocaleString('ko-KR');
-
             tr.innerHTML = `
                 <td><b>${row.id}</b></td>
                 <td><input type="text" value="${row.name || ''}" id="name-${row.id}"></td>
@@ -159,167 +187,65 @@
                 <td><input type="text" value="${row.preferred_time || ''}" id="time-${row.id}"></td>
                 <td><input type="text" value="${row.location || ''}" id="loc-${row.id}"></td>
                 <td><input type="text" value="${row.referrer || ''}" id="ref-${row.id}"></td>
-                <td><small style="color:#64748b;">${dateStr}</small></td>
+                <td><small>${dateStr}</small></td>
                 <td>
-                    <button class="btn btn-edit" onclick="updateRow(${row.id})">저장</button>
-                    <button class="btn btn-del" onclick="deleteRow(${row.id})">삭제</button>
+                    <button class="btn btn-edit" onclick="updateInquiry(${row.id})">저장</button>
+                    <button class="btn btn-del" onclick="deleteInquiry(${row.id})">삭제</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    function filterTable() {
-        const keyword = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = globalData.filter(row => {
-            return (
-                (row.name && row.name.toLowerCase().includes(keyword)) ||
-                (row.phone && row.phone.toLowerCase().includes(keyword)) ||
-                (row.role && row.role.toLowerCase().includes(keyword)) ||
-                (row.level && row.level.toLowerCase().includes(keyword)) ||
-                (row.location && row.location.toLowerCase().includes(keyword)) ||
-                (row.referrer && row.referrer.toLowerCase().includes(keyword)) ||
-                (row.preferred_time && row.preferred_time.toLowerCase().includes(keyword))
-            );
-        });
-        renderTable(filtered);
-    }
-
-    let sortDirection = false;
-    function sortTable(columnIndex) {
-        sortDirection = !sortDirection;
-        const keys = ['id', 'name', 'phone', 'role', 'level', 'preferred_time', 'location', 'referrer', 'created_at'];
-        const key = keys[columnIndex];
-
-        globalData.sort((a, b) => {
-            let valA = a[key] || '';
-            let valB = b[key] || '';
-            if (key === 'id') {
-                return sortDirection ? valA - valB : valB - valA;
+    async function fetchMeetups() {
+        try {
+            const res = await fetch('/api/admin?type=meetups', {
+                headers: { 'Authorization': `Bearer ${adminToken}` }
+            });
+            const result = await res.json();
+            if (res.ok && result.success) {
+                meetupsData = result.data;
+                renderMeetups(meetupsData);
+            } else {
+                alert(result.error || '인증 실패');
+                document.getElementById('authOverlay').style.display = 'flex';
             }
-            return sortDirection ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
-        });
-
-        filterTable();
+        } catch (err) {
+            alert('서버 통신 오류');
+        }
     }
 
-    function downloadCSV() {
-        if (!globalData || globalData.length === 0) {
-            alert('다운로드할 데이터가 없습니다.');
+    function renderMeetups(data) {
+        const tbody = document.getElementById('tableBodyMeetups');
+        tbody.innerHTML = '';
+        document.getElementById('statsMeetups').innerText = `오늘 매칭된 그룹: ${data.length}개 팀`;
+
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">오늘 생성된 밋업 그룹이 없습니다. (자동 매칭 전)</td></tr>';
             return;
         }
 
-        const headers = ['ID', '이름', '전화번호/카톡', '구분', '수준', '희망 시간대', '희망 지역', '추천인', '신청일시'];
-        let csvRows = [headers.join(',')];
-
-        globalData.forEach(row => {
-            const dateStr = new Date(row.created_at).toLocaleString('ko-KR').replace(/,/g, '');
-            const values = [
-                row.id,
-                `"${(row.name || '').replace(/"/g, '""')}"`,
-                `"${(row.phone || '').replace(/"/g, '""')}"`,
-                `"${(row.role || '').replace(/"/g, '""')}"`,
-                `"${(row.level || '').replace(/"/g, '""')}"`,
-                `"${(row.preferred_time || '').replace(/"/g, '""')}"`,
-                `"${(row.location || '').replace(/"/g, '""')}"`,
-                `"${(row.referrer || '').replace(/"/g, '""')}"`,
-                `"${dateStr}"`
-            ];
-            csvRows.push(values.join(','));
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>Group #${row.group_no}</b></td>
+                <td>${row.date}</td>
+                <td><input type="text" value="${row.facilitator || ''}" id="fac-${row.id}"></td>
+                <td><textarea id="mem-${row.id}">${row.members || ''}</textarea></td>
+                <td>
+                    <button class="btn btn-edit" onclick="updateMeetup(${row.id})">수정저장</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
-
-        const csvString = csvRows.join('\n');
-        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.setAttribute('href', url);
-        a.setAttribute('download', `esl_inquiries_${new Date().toISOString().slice(0, 10)}.csv`);
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
     }
 
-    async function uploadCSV(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const text = e.target.result;
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            
-            if (lines.length < 2) {
-                alert('업로드한 CSV 파일에 유효한 데이터가 없습니다.');
-                event.target.value = '';
-                return;
-            }
-
-            const items = [];
-            for (let i = 1; i < lines.length; i++) {
-                const row = lines[i];
-                const clean = (val) => val ? val.replace(/^"|"$/g, '').replace(/""/g, '"').trim() : '';
-                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                
-                if (cols.length >= 8) {
-                    items.push({
-                        name: clean(cols[1]),
-                        phone: clean(cols[2]),
-                        role: clean(cols[3]),
-                        level: clean(cols[4]),
-                        preferred_time: clean(cols[5]),
-                        location: clean(cols[6]),
-                        referrer: clean(cols[7])
-                    });
-                }
-            }
-
-            if (items.length === 0) {
-                alert('파싱 가능한 데이터가 없습니다. CSV 형식을 확인해주세요.');
-                event.target.value = '';
-                return;
-            }
-
-            if (!confirm(`총 ${items.length}개의 데이터를 데이터베이스에 일괄 등록하시겠습니까?`)) {
-                event.target.value = '';
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/admin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${adminToken}`
-                    },
-                    body: JSON.stringify({ items })
-                });
-
-                const result = await res.json();
-                if (res.ok && result.success) {
-                    alert('성공적으로 일괄 등록되었습니다!');
-                    fetchInquiries();
-                } else {
-                    alert('업로드 실패: ' + result.error);
-                }
-            } catch (err) {
-                alert('업로드 통신 중 오류가 발생했습니다.');
-            }
-
-            event.target.value = '';
-        };
-        reader.readAsText(file, 'UTF-8');
-    }
-
-    async function updateRow(id) {
+    async function updateMeetup(id) {
         const payload = {
+            target: 'meetup',
             id,
-            name: document.getElementById(`name-${id}`).value,
-            phone: document.getElementById(`phone-${id}`).value,
-            role: document.getElementById(`role-${id}`).value,
-            level: document.getElementById(`level-${id}`).value,
-            preferred_time: document.getElementById(`time-${id}`).value,
-            location: document.getElementById(`loc-${id}`).value,
-            referrer: document.getElementById(`ref-${id}`).value
+            facilitator: document.getElementById(`fac-${id}`).value,
+            members: document.getElementById(`mem-${id}`).value
         };
 
         try {
@@ -331,41 +257,49 @@
                 },
                 body: JSON.stringify(payload)
             });
-
             const result = await res.json();
             if (res.ok && result.success) {
-                alert(`[ID: ${id}] 정보가 성공적으로 수정되었습니다.`);
+                alert(`[Group ID: ${id}] 밋업 팀 정보가 수정되었습니다.`);
+                fetchMeetups();
             } else {
                 alert('수정 실패: ' + result.error);
             }
         } catch (err) {
-            alert('수정 요청 중 오류가 발생했습니다.');
+            alert('통신 중 오류가 발생했습니다.');
         }
     }
 
-    async function deleteRow(id) {
-        if (!confirm(`정말로 ID ${id}번 문의 데이터를 삭제하시겠습니까?`)) return;
+    async function updateInquiry(id) {
+        const payload = {
+            id,
+            name: document.getElementById(`name-${id}`).value,
+            phone: document.getElementById(`phone-${id}`).value,
+            role: document.getElementById(`role-${id}`).value,
+            level: document.getElementById(`level-${id}`).value,
+            preferred_time: document.getElementById(`time-${id}`).value,
+            location: document.getElementById(`loc-${id}`).value,
+            referrer: document.getElementById(`ref-${id}`).value
+        };
 
-        try {
-            const res = await fetch('/api/admin', {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${adminToken}`
-                },
-                body: JSON.stringify({ id })
-            });
+        const res = await fetch('/api/admin', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (res.ok && result.success) alert('수정되었습니다.');
+        else alert('실패');
+    }
 
-            const result = await res.json();
-            if (res.ok && result.success) {
-                alert('삭제되었습니다.');
-                fetchInquiries();
-            } else {
-                alert('삭제 실패: ' + result.error);
-            }
-        } catch (err) {
-            alert('삭제 요청 중 오류가 발생했습니다.');
-        }
+    async function deleteInquiry(id) {
+        if (!confirm('정말 삭제하시겠습니까?')) return;
+        const res = await fetch('/api/admin', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            body: JSON.stringify({ id })
+        });
+        const result = await res.json();
+        if (res.ok && result.success) { alert('삭제되었습니다.'); fetchInquiries(); }
     }
 </script>
 </body>
