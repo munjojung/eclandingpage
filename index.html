@@ -17,7 +17,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 밝고 명랑한 오렌지-핑크-옐로 톤의 그라데이션 배경 */
             background: linear-gradient(135deg, #ff9966 0%, #ff5e62 50%, #ffbb33 100%);
         }
         .card {
@@ -28,6 +27,25 @@
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
             text-align: center;
+            position: relative;
+        }
+        /* 언어 선택 버튼 스타일 */
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 15px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #555;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .lang-switch:hover {
+            background: #e0e0e0;
         }
         .title {
             font-size: 30px;
@@ -68,7 +86,6 @@
         .submit-btn {
             width: 100%;
             padding: 14px;
-            /* 활기차고 경쾌한 코랄-오렌지 그라데이션 버튼 */
             background: linear-gradient(90deg, #ff7e5f 0%, #feb47b 100%);
             border: none;
             border-radius: 25px;
@@ -91,32 +108,73 @@
 <body>
 
 <div class="card">
+    <!-- 언어 전환 버튼 -->
+    <button type="button" class="lang-switch" id="langBtn" onclick="toggleLanguage()">EN</button>
+
     <div class="title">English Community</div>
-    <div class="subtitle">- 영어 언어교환 문의하기 -</div>
+    <div class="subtitle" id="subText">- 영어 언어교환 문의하기 -</div>
+    
     <form id="contactForm">
         <div class="form-group">
-            <label for="name">이름</label>
+            <label for="name" id="labelName">이름</label>
             <input type="text" id="name" placeholder="홍길동" required>
         </div>
         <div class="form-group">
-            <label for="phone">휴대폰번호</label>
+            <label for="phone" id="labelPhone">휴대폰번호</label>
             <input type="tel" id="phone" placeholder="010-4560-2938" required>
         </div>
-        <button type="submit" class="submit-btn">언어교환 문의하기 ✨</button>
+        <button type="submit" class="submit-btn" id="submitBtn">언어교환 문의하기 ✨</button>
     </form>
 </div>
 
 <script>
+    let currentLang = 'ko';
+
+    const translations = {
+        ko: {
+            langBtn: 'EN',
+            subtitle: '- 영어 언어교환 문의하기 -',
+            labelName: '이름',
+            placeholderName: '홍길동',
+            labelPhone: '휴대폰번호',
+            submitBtn: '언어교환 문의하기 ✨',
+            successMsg: '문의 등록이 성공적으로 완료되었습니다!',
+            errorMsg: '등록 중 오류가 발생했습니다.',
+            networkError: '통신 오류가 발생했습니다.'
+        },
+        en: {
+            langBtn: 'KO',
+            subtitle: '- English Language Exchange Inquiry -',
+            labelName: 'Name',
+            placeholderName: 'John Doe',
+            labelPhone: 'Phone Number',
+            submitBtn: 'Apply for Language Exchange ✨',
+            successMsg: 'Your inquiry has been successfully submitted!',
+            errorMsg: 'An error occurred during submission.',
+            networkError: 'Network communication error.'
+        }
+    };
+
+    function toggleLanguage() {
+        currentLang = currentLang === 'ko' ? 'en' : 'ko';
+        const t = translations[currentLang];
+
+        document.getElementById('langBtn').innerText = t.langBtn;
+        document.getElementById('subText').innerText = t.subtitle;
+        document.getElementById('labelName').innerText = t.labelName;
+        document.getElementById('name').placeholder = t.placeholderName;
+        document.getElementById('labelPhone').innerText = t.labelPhone;
+        document.getElementById('submitBtn').innerText = t.submitBtn;
+    }
+
     document.getElementById('contactForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const nameVal = document.getElementById('name').value.trim();
         const phoneVal = document.getElementById('phone').value.trim();
-        
-        // 기존 Notion 모듈이 기대하는 "이름 전화번호" 형태 조합
         const combinedData = `${nameVal} ${phoneVal}`;
+        const t = translations[currentLang];
 
-        // Make.com Webhook URL
         const webhookUrl = 'https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9';
 
         try {
@@ -131,14 +189,14 @@
             });
 
             if (response.ok) {
-                alert('문의 등록이 성공적으로 완료되었습니다!');
+                alert(t.successMsg);
                 document.getElementById('contactForm').reset();
             } else {
-                alert('등록 중 오류가 발생했습니다.');
+                alert(t.errorMsg);
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('통신 오류가 발생했습니다.');
+            alert(t.networkError);
         }
     });
 </script>
