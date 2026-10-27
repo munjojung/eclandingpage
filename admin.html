@@ -239,7 +239,6 @@
         document.body.removeChild(a);
     }
 
-    // CSV 파일 업로드 및 일괄 등록 함수
     async function uploadCSV(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -256,18 +255,11 @@
             }
 
             const items = [];
-            // 첫 줄(헤더)을 제외하고 데이터 파싱
             for (let i = 1; i < lines.length; i++) {
-                // 간단한 CSV 파싱 (따옴표 처리 고려)
                 const row = lines[i];
-                const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(',');
-                
-                // 정제 함수 (따옴표 제거)
                 const clean = (val) => val ? val.replace(/^"|"$/g, '').replace(/""/g, '"').trim() : '';
-
-                // 다운로드받았던 포맷 기준: [ID, 이름, 전화번호, 구분, 수준, 희망시간대, 희망지역, 추천인, 신청일시]
-                // 업로드 시에는 이름(1), 전화번호(2), 구분(3), 수준(4), 희망시간대(5), 희망지역(6), 추천인(7)을 매핑
                 const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                
                 if (cols.length >= 8) {
                     items.push({
                         name: clean(cols[1]),
@@ -287,7 +279,7 @@
                 return;
             }
 
-            if (!confirm(`총 ${items.length개의 데이터를 데이터베이스에 일괄 등록하시겠습니까?`)) {
+            if (!confirm(`총 ${items.length}개의 데이터를 데이터베이스에 일괄 등록하시겠습니까?`)) {
                 event.target.value = '';
                 return;
             }
@@ -313,7 +305,7 @@
                 alert('업로드 통신 중 오류가 발생했습니다.');
             }
 
-            event.target.value = ''; // 파일 input 초기화
+            event.target.value = '';
         };
         reader.readAsText(file, 'UTF-8');
     }
