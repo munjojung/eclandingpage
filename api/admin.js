@@ -3,10 +3,8 @@ import { neon } from '@neondatabase/serverless';
 export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL);
   
-  // Vercel 환경변수 ADMIN_PASSWORD를 사용하며, 없을 시 기본값 사용
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234!'; 
 
-  // 인증 검증 (Authorization 헤더의 Bearer Token 확인)
   const authHeader = req.headers['authorization'];
   if (!authHeader || authHeader !== `Bearer ${ADMIN_PASSWORD}`) {
     return res.status(401).json({ error: '인증에 실패했습니다. 관리자 비밀번호를 확인해 주세요.' });
@@ -19,7 +17,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, data: rows });
     }
 
-    // 2. 정보 수정 (PUT)
+    // 2. 일괄 데이터 추가 (POST - CSV 업로드용)
+    if (req.method === 'POST') {
+      const { items } = req.body;
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: '추가할 데이터가 없습니다.' });
+      }
+
+      for (const item of items) {
+        await sql`
+          INSERT INTO esl_inquiries (name, phone, role, level, preferred_time, location, referrer)
+          VALUES (${item.name || ''}, ${item.phone || ''}, ${item.role || ''}, ${item.level || ''}, ${item.preferred_time || ''}, ${item.location || ''}, ${item.referrer || ''});
+        `;
+      }
+      return res.status(200).json({ success: true, message: '성공적으로 등록되었습니다.' });
+    }
+
+    // 3. 정보 수정 (PUT)
     if (req.method === 'PUT') {
       const { id, name, phone, role, level, preferred_time, location, referrer } = req.body;
       if (!id) return res.status(400).json({ error: 'ID가 필요합니다.' });
@@ -34,7 +48,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, data: updated[0] });
     }
 
-    // 3. 항목 삭제 (DELETE)
+    // 4. 항목 삭제 (DELETE)
     if (req.method === 'DELETE') {
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: 'ID가 필요합니다.' });

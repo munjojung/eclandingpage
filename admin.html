@@ -12,7 +12,7 @@
         .header-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         
         /* 검색창 스타일 */
-        .search-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 230px; }
+        .search-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 200px; }
         .search-input:focus { border-color: #3b82f6; outline: none; }
 
         /* 암호 입력 팝업 */
@@ -36,8 +36,12 @@
         .btn-edit:hover { background: #16a34a; }
         .btn-del { background: #ef4444; color: white; }
         .btn-del:hover { background: #dc2626; }
-        .btn-refresh { background: #3b82f6; color: white; padding: 8px 16px; font-size: 13px; }
-        .btn-logout { background: #64748b; color: white; padding: 8px 16px; font-size: 13px; }
+        .btn-refresh { background: #3b82f6; color: white; padding: 8px 12px; font-size: 13px; }
+        .btn-csv { background: #84cc16; color: white; padding: 8px 12px; font-size: 13px; }
+        .btn-csv:hover { background: #65a30d; }
+        .btn-upload { background: #f59e0b; color: white; padding: 8px 12px; font-size: 13px; }
+        .btn-upload:hover { background: #d97706; }
+        .btn-logout { background: #64748b; color: white; padding: 8px 12px; font-size: 13px; }
         .btn-logout:hover { background: #475569; }
         
         .stats-info { font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: 500; }
@@ -58,7 +62,10 @@
     <h1>
         <span>📋 ESL 문의 관리 시스템</span>
         <div class="header-controls">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 검색 (이름, 번호, 지역...)" oninput="filterTable()">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 검색..." oninput="filterTable()">
+            <button class="btn btn-csv" onclick="downloadCSV()">다운로드 📥</button>
+            <button class="btn btn-upload" onclick="document.getElementById('csvFileInput').click()">업로드 📤</button>
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="uploadCSV(event)">
             <button class="btn btn-refresh" onclick="fetchInquiries()">새로고침 🔄</button>
             <button class="btn btn-logout" onclick="logout()">로그아웃 🔒</button>
         </div>
@@ -194,6 +201,121 @@
         });
 
         filterTable();
+    }
+
+    function downloadCSV() {
+        if (!globalData || globalData.length === 0) {
+            alert('다운로드할 데이터가 없습니다.');
+            return;
+        }
+
+        const headers = ['ID', '이름', '전화번호/카톡', '구분', '수준', '희망 시간대', '희망 지역', '추천인', '신청일시'];
+        let csvRows = [headers.join(',')];
+
+        globalData.forEach(row => {
+            const dateStr = new Date(row.created_at).toLocaleString('ko-KR').replace(/,/g, '');
+            const values = [
+                row.id,
+                `"${(row.name || '').replace(/"/g, '""')}"`,
+                `"${(row.phone || '').replace(/"/g, '""')}"`,
+                `"${(row.role || '').replace(/"/g, '""')}"`,
+                `"${(row.level || '').replace(/"/g, '""')}"`,
+                `"${(row.preferred_time || '').replace(/"/g, '""')}"`,
+                `"${(row.location || '').replace(/"/g, '""')}"`,
+                `"${(row.referrer || '').replace(/"/g, '""')}"`,
+                `"${dateStr}"`
+            ];
+            csvRows.push(values.join(','));
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('href', url);
+        a.setAttribute('download', `esl_inquiries_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // CSV 파일 업로드 및 일괄 등록 함수
+    async function uploadCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const text = e.target.result;
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            
+            if (lines.length < 2) {
+                alert('업로드한 CSV 파일에 유효한 데이터가 없습니다.');
+                event.target.value = '';
+                return;
+            }
+
+            const items = [];
+            // 첫 줄(헤더)을 제외하고 데이터 파싱
+            for (let i = 1; i < lines.length; i++) {
+                // 간단한 CSV 파싱 (따옴표 처리 고려)
+                const row = lines[i];
+                const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(',');
+                
+                // 정제 함수 (따옴표 제거)
+                const clean = (val) => val ? val.replace(/^"|"$/g, '').replace(/""/g, '"').trim() : '';
+
+                // 다운로드받았던 포맷 기준: [ID, 이름, 전화번호, 구분, 수준, 희망시간대, 희망지역, 추천인, 신청일시]
+                // 업로드 시에는 이름(1), 전화번호(2), 구분(3), 수준(4), 희망시간대(5), 희망지역(6), 추천인(7)을 매핑
+                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (cols.length >= 8) {
+                    items.push({
+                        name: clean(cols[1]),
+                        phone: clean(cols[2]),
+                        role: clean(cols[3]),
+                        level: clean(cols[4]),
+                        preferred_time: clean(cols[5]),
+                        location: clean(cols[6]),
+                        referrer: clean(cols[7])
+                    });
+                }
+            }
+
+            if (items.length === 0) {
+                alert('파싱 가능한 데이터가 없습니다. CSV 형식을 확인해주세요.');
+                event.target.value = '';
+                return;
+            }
+
+            if (!confirm(`총 ${items.length개의 데이터를 데이터베이스에 일괄 등록하시겠습니까?`)) {
+                event.target.value = '';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: JSON.stringify({ items })
+                });
+
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    alert('성공적으로 일괄 등록되었습니다!');
+                    fetchInquiries();
+                } else {
+                    alert('업로드 실패: ' + result.error);
+                }
+            } catch (err) {
+                alert('업로드 통신 중 오류가 발생했습니다.');
+            }
+
+            event.target.value = ''; // 파일 input 초기화
+        };
+        reader.readAsText(file, 'UTF-8');
     }
 
     async function updateRow(id) {
