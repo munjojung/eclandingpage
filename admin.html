@@ -8,9 +8,13 @@
         * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, sans-serif; }
         body { background-color: #f4f6f9; margin: 0; padding: 25px; }
         .container { max-width: 1280px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-        h1 { font-size: 22px; color: #333; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header-btns { display: flex; gap: 8px; }
+        h1 { font-size: 22px; color: #333; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .header-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         
+        /* 검색창 스타일 */
+        .search-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 230px; }
+        .search-input:focus { border-color: #3b82f6; outline: none; }
+
         /* 암호 입력 팝업 */
         #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .auth-card { background: white; padding: 30px; border-radius: 12px; text-align: center; width: 340px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
@@ -22,7 +26,8 @@
         .table-wrapper { overflow-x: auto; margin-top: 15px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
-        th { background: #f8fafc; font-weight: 700; color: #475569; }
+        th { background: #f8fafc; font-weight: 700; color: #475569; cursor: pointer; user-select: none; }
+        th:hover { background: #f1f5f9; }
         td input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
         td input:focus { border-color: #ff5e62; outline: none; }
         
@@ -34,6 +39,8 @@
         .btn-refresh { background: #3b82f6; color: white; padding: 8px 16px; font-size: 13px; }
         .btn-logout { background: #64748b; color: white; padding: 8px 16px; font-size: 13px; }
         .btn-logout:hover { background: #475569; }
+        
+        .stats-info { font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -50,25 +57,27 @@
 <div class="container">
     <h1>
         <span>📋 ESL 문의 관리 시스템</span>
-        <div class="header-btns">
+        <div class="header-controls">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 검색 (이름, 번호, 지역...)" oninput="filterTable()">
             <button class="btn btn-refresh" onclick="fetchInquiries()">새로고침 🔄</button>
             <button class="btn btn-logout" onclick="logout()">로그아웃 🔒</button>
         </div>
     </h1>
+    <div class="stats-info" id="statsInfo">총 문의 건수: 0건</div>
 
     <div class="table-wrapper">
         <table>
             <thead>
                 <tr>
-                    <th style="width: 45px;">ID</th>
-                    <th>이름</th>
-                    <th>전화번호/카톡</th>
-                    <th>구분 (역할)</th>
-                    <th>수준</th>
-                    <th>희망 시간대</th>
-                    <th>희망 지역</th>
-                    <th>추천인</th>
-                    <th>신청일시</th>
+                    <th style="width: 45px;" onclick="sortTable(0)">ID ↕</th>
+                    <th onclick="sortTable(1)">이름 ↕</th>
+                    <th onclick="sortTable(2)">전화번호/카톡 ↕</th>
+                    <th onclick="sortTable(3)">구분 (역할) ↕</th>
+                    <th onclick="sortTable(4)">수준 ↕</th>
+                    <th onclick="sortTable(5)">희망 시간대 ↕</th>
+                    <th onclick="sortTable(6)">희망 지역 ↕</th>
+                    <th onclick="sortTable(7)">추천인 ↕</th>
+                    <th onclick="sortTable(8)">신청일시 ↕</th>
                     <th style="width: 115px;">관리</th>
                 </tr>
             </thead>
@@ -81,6 +90,7 @@
 
 <script>
     let adminToken = '';
+    let globalData = [];
 
     function authenticate() {
         const pwd = document.getElementById('adminPasswordInput').value.trim();
@@ -91,24 +101,26 @@
 
     function logout() {
         adminToken = '';
+        globalData = [];
         document.getElementById('adminPasswordInput').value = '';
         document.getElementById('authOverlay').style.display = 'flex';
         document.getElementById('inquiryTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px;">로그인 후 문의 데이터가 표시됩니다.</td></tr>';
+        document.getElementById('statsInfo').innerText = '총 문의 건수: 0건';
     }
 
     async function fetchInquiries() {
         try {
-            const res = __await_fetch ? await __await_fetch() : await fetch('/api/admin', {
+            const res = await fetch('/api/admin', {
                 headers: { 'Authorization': `Bearer ${adminToken}` }
             });
             const result = await res.json();
 
             if (res.ok && result.success) {
                 document.getElementById('authOverlay').style.display = 'none';
-                renderTable(result.data);
+                globalData = result.data;
+                filterTable();
             } else {
                 alert(result.error || '비밀번호가 올바르지 않습니다.');
-                // 인증 실패 시 로그인 창 다시 띄우기
                 document.getElementById('authOverlay').style.display = 'flex';
             }
         } catch (err) {
@@ -120,8 +132,10 @@
         const tbody = document.getElementById('inquiryTableBody');
         tbody.innerHTML = '';
 
+        document.getElementById('statsInfo').innerText = `총 문의 건수: ${data.length}건`;
+
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px;">등록된 문의 내역이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px;">검색 결과가 없거나 등록된 문의 내역이 없습니다.</td></tr>';
             return;
         }
 
@@ -146,6 +160,40 @@
             `;
             tbody.appendChild(tr);
         });
+    }
+
+    function filterTable() {
+        const keyword = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = globalData.filter(row => {
+            return (
+                (row.name && row.name.toLowerCase().includes(keyword)) ||
+                (row.phone && row.phone.toLowerCase().includes(keyword)) ||
+                (row.role && row.role.toLowerCase().includes(keyword)) ||
+                (row.level && row.level.toLowerCase().includes(keyword)) ||
+                (row.location && row.location.toLowerCase().includes(keyword)) ||
+                (row.referrer && row.referrer.toLowerCase().includes(keyword)) ||
+                (row.preferred_time && row.preferred_time.toLowerCase().includes(keyword))
+            );
+        });
+        renderTable(filtered);
+    }
+
+    let sortDirection = false;
+    function sortTable(columnIndex) {
+        sortDirection = !sortDirection;
+        const keys = ['id', 'name', 'phone', 'role', 'level', 'preferred_time', 'location', 'referrer', 'created_at'];
+        const key = keys[columnIndex];
+
+        globalData.sort((a, b) => {
+            let valA = a[key] || '';
+            let valB = b[key] || '';
+            if (key === 'id') {
+                return sortDirection ? valA - valB : valB - valA;
+            }
+            return sortDirection ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+        });
+
+        filterTable();
     }
 
     async function updateRow(id) {
