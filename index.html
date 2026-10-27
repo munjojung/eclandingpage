@@ -116,8 +116,8 @@
         // 노션 DB 양식 및 기존 파서에 맞게 "홍길동 010-4560-2938" 형태로 결합
         const combinedData = `${nameVal} ${phoneVal}`;
 
-        // Make.com의 Integration Webhooks, Notion 시나리오에서 복사한 Webhook URL을 넣으세요.
-        const webhookUrl = 'https://hook.eu1.make.com/YOUR_WEBHOOK_URL';
+        // 👉 여기에 Make.com에서 복사하신 Webhook URL을 넣어주세요!
+        const webhookUrl = 'https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9';
 
         try {
             const response = await fetch(webhookUrl, {
