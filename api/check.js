@@ -12,16 +12,17 @@ export default async function handler(req, res) {
 
   try {
     const sql = neon(process.env.DATABASE_URL);
-    const today = new Date().toISOString().slice(0, 10);
+    const cleanPhone = phone.trim();
 
+    // 날짜 제한 없이 모든 밋업 그룹 데이터를 불러와서 검색 (최근 등록순)
     const groups = await sql`
       SELECT * FROM esl_meetup_groups 
-      WHERE date = ${today};
+      ORDER BY id DESC;
     `;
 
     let matchedGroup = null;
     for (const group of groups) {
-      if (group.members && group.members.includes(phone.trim())) {
+      if (group.members && group.members.includes(cleanPhone)) {
         matchedGroup = group;
         break;
       }
