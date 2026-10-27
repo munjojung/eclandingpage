@@ -141,23 +141,26 @@
     <div class="title">English Community</div>
     <div class="subtitle" id="subText">- 영어 언어교환 문의하기 -</div>
     
-    <form id="contactForm">
+    <!-- 숨겨진 iframe을 타겟으로 하여 페이지 이동 및 CORS 차단 우회 -->
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+
+    <form id="contactForm" action="https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9" method="POST" target="hidden_iframe">
         <!-- 1. 이름 -->
         <div class="form-group">
             <label for="name" id="labelName">이름</label>
-            <input type="text" id="name" placeholder="홍길동" required>
+            <input type="text" id="name" name="name" placeholder="홍길동" required>
         </div>
 
         <!-- 2. 전화번호 및 메신저 ID -->
         <div class="form-group">
             <label for="phone" id="labelPhone">휴대폰번호 / 카카오톡 ID</label>
-            <input type="text" id="phone" placeholder="010-4560-2938 또는 Kakao ID" required>
+            <input type="text" id="phone" name="phone" placeholder="010-4560-2938 또는 Kakao ID" required>
         </div>
 
         <!-- 3. 역할 및 구분 -->
         <div class="form-group">
             <label for="role" id="labelRole">구분 (역할)</label>
-            <select id="role" required>
+            <select id="role" name="role" required>
                 <option value="Korean Learner" id="optRole1">한국인 참가자 (Korean Learner)</option>
                 <option value="Native Speaker" id="optRole2">Native English Speaker</option>
                 <option value="Fluent Speaker" id="optRole3">Fluent English Speaker</option>
@@ -167,7 +170,7 @@
         <!-- 4. 언어 수준 -->
         <div class="form-group">
             <label for="level" id="labelLevel">영어/한국어 수준</label>
-            <select id="level" required>
+            <select id="level" name="level" required>
                 <option value="Beginner" id="optLvl1">초급 (Beginner)</option>
                 <option value="Intermediate" id="optLvl2" selected>중급 (Intermediate)</option>
                 <option value="Advanced" id="optLvl3">고급/자유대화 (Advanced)</option>
@@ -179,11 +182,11 @@
             <label id="labelTime">참여 희망 방식 및 시간대 (중복 가능)</label>
             <div class="checkbox-group">
                 <label class="checkbox-item">
-                    <input type="checkbox" id="timeOffline" value="Offline(11:00-13:00)">
+                    <input type="checkbox" id="timeOffline" name="time" value="Offline(11:00-13:00)">
                     <span id="txtOffline">오프라인 낮 (11:00 ~ 13:00)</span>
                 </label>
                 <label class="checkbox-item">
-                    <input type="checkbox" id="timeOnline" value="Online(20:00-21:30)" checked>
+                    <input type="checkbox" id="timeOnline" name="time" value="Online(20:00-21:30)" checked>
                     <span id="txtOnline">온라인 저녁 (20:00 ~ 21:30)</span>
                 </label>
             </div>
@@ -192,7 +195,7 @@
         <!-- 6. 오프라인 선호 지역 -->
         <div class="form-group">
             <label for="location" id="labelLoc">오프라인 희망 지역 (오프라인 선택 시)</label>
-            <select id="location">
+            <select id="location" name="location">
                 <option value="Yuseong" id="optLoc1">유성구 (궁동/봉명/도안 등)</option>
                 <option value="Seo-gu" id="optLoc2">서구 (둔산/월평 등)</option>
                 <option value="Anywhere" id="optLoc3">장소 상관없음 / 온라인 위주</option>
@@ -202,7 +205,7 @@
         <!-- 7. 추천인 -->
         <div class="form-group">
             <label for="referrer" id="labelRef">추천인 이름 (지인 소개 시)</label>
-            <input type="text" id="referrer" placeholder="추천인 이름 (선택사항)">
+            <input type="text" id="referrer" name="referrer" placeholder="추천인 이름 (선택사항)">
         </div>
 
         <!-- 8. 개인정보 수집 동의 -->
@@ -214,6 +217,9 @@
                 </label>
             </div>
         </div>
+
+        <!-- Make.com 수신을 위해 데이터를 하나로 묶어줄 숨겨진 필드 -->
+        <input type="hidden" id="userRequest_utterance" name="userRequest[utterance]">
 
         <button type="submit" class="submit-btn" id="submitBtn">언어교환 문의하기 ✨</button>
     </form>
@@ -249,8 +255,7 @@
             placeholderRef: '추천인 이름 (선택사항)',
             txtPrivacy: '[필수] 입력 정보는 언어교환 매칭 안내 목적으로만 활용됩니다.',
             submitBtn: '언어교환 문의하기 ✨',
-            successMsg: '문의 등록이 성공적으로 완료되었습니다!',
-            errorMsg: '등록 중 오류가 발생했습니다.'
+            successMsg: '문의 등록이 성공적으로 완료되었습니다!'
         },
         en: {
             langBtn: 'KO',
@@ -278,8 +283,7 @@
             placeholderRef: 'Name of the person who invited you',
             txtPrivacy: '[Required] Your contact details will strictly be used for coordination & matching.',
             submitBtn: 'Apply for Language Exchange ✨',
-            successMsg: 'Your inquiry has been successfully submitted!',
-            errorMsg: 'An error occurred during submission.'
+            successMsg: 'Your inquiry has been successfully submitted!'
         }
     };
 
@@ -321,8 +325,6 @@
     }
 
     document.getElementById('contactForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
         const nameVal = document.getElementById('name').value.trim();
         const phoneVal = document.getElementById('phone').value.trim();
         const roleVal = document.getElementById('role').value;
@@ -336,20 +338,17 @@
         const locVal = document.getElementById('location').value;
         const refVal = document.getElementById('referrer').value.trim() || 'Direct';
 
-        // Notion Name 속성으로 매핑될 전체 텍스트
+        // 기존에 Make.com이 인식하던 utterance 포맷 그대로 조립
         const combinedData = `${nameVal} | ${phoneVal} | [${roleVal}] | Lvl:${levelVal} | Time:${timeVal} | Loc:${locVal} | Ref:${refVal}`;
+        document.getElementById('userRequest_utterance').value = combinedData;
 
         const t = translations[currentLang];
-        const webhookUrl = 'https://hook.eu1.make.com/qs051jn1knpukmuyovh3shungwx7m4u9';
-
-        // Image 오브젝트를 통한 비동기 Beacon 픽셀 전송 (CORS 제약 완전 우회)
-        const img = new Image();
-        const encodedData = encodeURIComponent(combinedData);
-        img.src = `${webhookUrl}?userRequest[utterance]=${encodedData}&_t=${new Date().getTime()}`;
-
-        // 성공 안내 및 폼 초기화
-        alert(t.successMsg);
-        document.getElementById('contactForm').reset();
+        
+        // 백그라운드 전송 후 사용자에게 성공 팝업 및 폼 초기화
+        setTimeout(function() {
+            alert(t.successMsg);
+            document.getElementById('contactForm').reset();
+        }, 500);
     });
 </script>
 
