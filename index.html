@@ -152,7 +152,7 @@
 
         <!-- 2. 전화번호 및 메신저 ID -->
         <div class="form-group">
-            <label for="phone" id="labelPhone">휴대폰번호 / 카카오톡 ID</label>
+            <label for="phone_input" id="labelPhone">휴대폰번호 / 카카오톡 ID</label>
             <input type="text" id="phone_input" placeholder="010-4560-2938 또는 Kakao ID" required>
         </div>
 
@@ -217,7 +217,7 @@
             </div>
         </div>
 
-        <!-- Make.com으로 보내는 변수 필드들 -->
+        <!-- Make.com 수신용 필드: Name용 요약 정보 & 전화번호 전용 필드 -->
         <input type="hidden" id="userRequest_utterance" name="userRequest[utterance]">
         <input type="hidden" id="phone_field" name="phone">
 
@@ -338,11 +338,11 @@
         const locVal = document.getElementById('location').value;
         const refVal = document.getElementById('referrer').value.trim() || 'Direct';
 
-        // 1. Name 컬럼에 들어갈 전체 정보 조립
+        // 1. Name 컬럼용 전체 문자열
         const combinedData = `${nameVal} | ${phoneVal} | [${roleVal}] | Lvl:${levelVal} | Time:${timeVal} | Loc:${locVal} | Ref:${refVal}`;
         document.getElementById('userRequest_utterance').value = combinedData;
 
-        // 2. 전화번호 컬럼에 들어갈 단독 전화번호 값 설정
+        // 2. 전화번호 컬럼용 순수 phone 값
         document.getElementById('phone_field').value = phoneVal;
 
         const t = translations[currentLang];
