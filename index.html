@@ -131,6 +131,21 @@
         .submit-btn:active {
             transform: scale(0.98);
         }
+        .check-link-box {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            text-align: center;
+        }
+        .check-link-box a {
+            font-size: 13px;
+            color: #0284c7;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .check-link-box a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -141,7 +156,6 @@
     <div class="title">English Community</div>
     <div class="subtitle" id="subText">- 영어 언어교환 문의하기 -</div>
     
-    <!-- Neon 서버리스 API로 직접 비동기 전송하므로 action/target 제거 -->
     <form id="contactForm">
         <!-- 1. 이름 -->
         <div class="form-group">
@@ -218,6 +232,11 @@
 
         <button type="submit" class="submit-btn" id="submitBtn">언어교환 문의하기 ✨</button>
     </form>
+
+    <!-- 밋업 팀 조회 링크 추가 -->
+    <div class="check-link-box">
+        <a href="check.html" target="_blank" id="checkLinkText">🔍 오늘 내 밋업 팀 확인하기 &rarr;</a>
+    </div>
 </div>
 
 <script>
@@ -241,7 +260,7 @@
             optLvl3: '고급/자유대화 (Advanced)',
             labelTime: '참여 희망 방식 및 시간대 (중복 가능)',
             txtOffline: '오프라인 낮 (11:00 ~ 13:00)',
-            txtOnline: '온라인 저녁 (20:00 ~ 9:30)',
+            txtOnline: '온라인 저녁 (20:00 ~ 21:30)',
             labelLoc: '오프라인 희망 지역 (오프라인 선택 시)',
             optLoc1: '유성구 (궁동/봉명/도안 등)',
             optLoc2: '서구 (둔산/월평 등)',
@@ -250,6 +269,7 @@
             placeholderRef: '추천인 이름 (선택사항)',
             txtPrivacy: '[필수] 입력 정보는 언어교환 매칭 안내 목적으로만 활용됩니다.',
             submitBtn: '언어교환 문의하기 ✨',
+            checkLink: '🔍 오늘 내 밋업 팀 확인하기 →',
             successMsg: '문의 등록이 성공적으로 완료되었습니다!',
             errorMsg: '제출 중 오류가 발생했습니다. 다시 시도해 주세요.'
         },
@@ -279,6 +299,7 @@
             placeholderRef: 'Name of the person who invited you',
             txtPrivacy: '[Required] Your contact details will strictly be used for coordination & matching.',
             submitBtn: 'Apply for Language Exchange ✨',
+            checkLink: '🔍 Check My Today’s Meetup Team →',
             successMsg: 'Your inquiry has been successfully submitted!',
             errorMsg: 'An error occurred. Please try again.'
         }
@@ -319,9 +340,9 @@
         document.getElementById('txtPrivacy').innerText = t.txtPrivacy;
 
         document.getElementById('submitBtn').innerText = t.submitBtn;
+        document.getElementById('checkLinkText').innerText = t.checkLink;
     }
 
-    // 폼 제출 시 백엔드 API(`/api/submit`)로 데이터 전송
     document.getElementById('contactForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
@@ -338,7 +359,6 @@
         const locVal = document.getElementById('location').value;
         const refVal = document.getElementById('referrer').value.trim() || 'Direct';
 
-        // 서버로 전송할 페이로드 구성
         const formData = {
             name: nameVal,
             phone: phoneVal,
@@ -352,7 +372,7 @@
 
         const t = translations[currentLang];
         const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true; // 중복 제출 방지
+        submitBtn.disabled = true;
 
         try {
             const response = await fetch('/api/submit', {

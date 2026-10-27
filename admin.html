@@ -11,38 +11,34 @@
         h1 { font-size: 22px; color: #333; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .header-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         
-        /* 탭 메뉴 스타일 */
         .tab-menu { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
         .tab-btn { padding: 8px 16px; border: none; background: #e2e8f0; color: #475569; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .tab-btn.active { background: #3b82f6; color: white; }
 
-        .search-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 200px; }
-        .search-input:focus { border-color: #3b82f6; outline: none; }
+        .btn { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; }
+        .btn-check { background: #0ea5e9; color: white; }
+        .btn-check:hover { background: #0284c7; }
+        .btn-refresh { background: #3b82f6; color: white; }
+        .btn-logout { background: #64748b; color: white; }
+        .btn-edit { background: #22c55e; color: white; padding: 6px 12px; font-size: 12px; }
+        .btn-del { background: #ef4444; color: white; padding: 6px 12px; font-size: 12px; }
 
-        /* 로그인 오버레이 */
+        .table-wrapper { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
+        th { background: #f8fafc; font-weight: 700; color: #475569; }
+        td input, td textarea { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
+        td textarea { resize: vertical; height: 50px; }
+        
+        .stats-info { font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: 500; }
+        .section-view { display: none; }
+        .section-view.active { display: block; }
+        
         #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .auth-card { background: white; padding: 30px; border-radius: 12px; text-align: center; width: 340px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .auth-card h3 { margin-bottom: 15px; color: #ff5e62; }
         .auth-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; text-align: center; }
         .auth-card button { width: 100%; padding: 12px; background: #ff5e62; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        
-        /* 테이블 스타일 */
-        .table-wrapper { overflow-x: auto; margin-top: 15px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
-        th { background: #f8fafc; font-weight: 700; color: #475569; cursor: pointer; }
-        td input, td textarea { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
-        td textarea { resize: vertical; height: 50px; }
-        
-        .btn { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; margin-right: 2px; }
-        .btn-edit { background: #22c55e; color: white; }
-        .btn-del { background: #ef4444; color: white; }
-        .btn-refresh { background: #3b82f6; color: white; padding: 8px 12px; font-size: 13px; }
-        .btn-logout { background: #64748b; color: white; padding: 8px 12px; font-size: 13px; }
-        
-        .stats-info { font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: 500; }
-        .section-view { display: none; }
-        .section-view.active { display: block; }
     </style>
 </head>
 <body>
@@ -60,6 +56,7 @@
     <h1>
         <span>📋 ESL 통합 관리 시스템</span>
         <div class="header-controls">
+            <a href="check.html" target="_blank" class="btn btn-check">팀 조회 페이지 🔗</a>
             <button class="btn btn-refresh" onclick="loadCurrentView()">새로고침 🔄</button>
             <button class="btn btn-logout" onclick="logout()">로그아웃 🔒</button>
         </div>
@@ -121,8 +118,6 @@
 <script>
     let adminToken = '';
     let currentTab = 'inquiries';
-    let inquiriesData = [];
-    let meetupsData = [];
 
     function authenticate() {
         const pwd = document.getElementById('adminPasswordInput').value.trim();
@@ -159,8 +154,7 @@
             });
             const result = await res.json();
             if (res.ok && result.success) {
-                inquiriesData = result.data;
-                renderInquiries(inquiriesData);
+                renderInquiries(result.data);
             } else {
                 alert(result.error || '인증 실패');
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -204,8 +198,7 @@
             });
             const result = await res.json();
             if (res.ok && result.success) {
-                meetupsData = result.data;
-                renderMeetups(meetupsData);
+                renderMeetups(result.data);
             } else {
                 alert(result.error || '인증 실패');
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -221,7 +214,7 @@
         document.getElementById('statsMeetups').innerText = `오늘 매칭된 그룹: ${data.length}개 팀`;
 
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">오늘 생성된 밋업 그룹이 없습니다. (자동 매칭 전)</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">오늘 생성된 밋업 그룹이 없습니다.</td></tr>';
             return;
         }
 
@@ -248,25 +241,16 @@
             members: document.getElementById(`mem-${id}`).value
         };
 
-        try {
-            const res = await fetch('/api/admin', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${adminToken}`
-                },
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            if (res.ok && result.success) {
-                alert(`[Group ID: ${id}] 밋업 팀 정보가 수정되었습니다.`);
-                fetchMeetups();
-            } else {
-                alert('수정 실패: ' + result.error);
-            }
-        } catch (err) {
-            alert('통신 중 오류가 발생했습니다.');
-        }
+        const res = await fetch('/api/admin', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+            alert('수정되었습니다.');
+            fetchMeetups();
+        } else alert('실패');
     }
 
     async function updateInquiry(id) {
@@ -278,9 +262,8 @@
             level: document.getElementById(`level-${id}`).value,
             preferred_time: document.getElementById(`time-${id}`).value,
             location: document.getElementById(`loc-${id}`).value,
-            referrer: document.getElementById(`ref-${id}`).value
+            referrer: document.getElementById(`ref-${id}` ).value
         };
-
         const res = await fetch('/api/admin', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },

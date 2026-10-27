@@ -14,13 +14,11 @@ export default async function handler(req, res) {
     const sql = neon(process.env.DATABASE_URL);
     const today = new Date().toISOString().slice(0, 10);
 
-    // 오늘 날짜의 밋업 그룹 데이터 조회
     const groups = await sql`
       SELECT * FROM esl_meetup_groups 
       WHERE date = ${today};
     `;
 
-    // 입력한 전화번호가 members 컬럼에 포함된 그룹 찾기
     let matchedGroup = null;
     for (const group of groups) {
       if (group.members && group.members.includes(phone.trim())) {
@@ -30,7 +28,10 @@ export default async function handler(req, res) {
     }
 
     if (!matchedGroup) {
-      return res.status(404).json({ success: false, error: '오늘 날짜로 매칭된 밋업 그룹을 찾을 수 없습니다. (전화번호를 확인해 주세요)' });
+      return res.status(404).json({ 
+        success: false, 
+        error: '오늘 날짜로 매칭된 밋업 그룹을 찾을 수 없습니다. (전화번호를 확인해 주세요) 문의가 필요하면 어드민(010-3450-2090)으로 연락하시면 안내드리겠습니다.' 
+      });
     }
 
     return res.status(200).json({
