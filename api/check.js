@@ -1,415 +1,52 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESL 문의 및 밋업 관리자 페이지</title>
-    <style>
-        * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, sans-serif; }
-        body { background-color: #f4f6f9; margin: 0; padding: 25px; }
-        .container { max-width: 1280px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-        h1 { font-size: 22px; color: #333; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .header-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        
-        .tab-menu { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-        .tab-btn { padding: 8px 16px; border: none; background: #e2e8f0; color: #475569; font-weight: bold; border-radius: 6px; cursor: pointer; }
-        .tab-btn.active { background: #3b82f6; color: white; }
+import { neon } from '@neondatabase/serverless';
 
-        .btn { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
-        .btn-check { background: #0ea5e9; color: white; }
-        .btn-check:hover { background: #0284c7; }
-        .btn-download { background: #10b981; color: white; }
-        .btn-download:hover { background: #059669; }
-        .btn-upload { background: #8b5cf6; color: white; }
-        .btn-upload:hover { background: #7c3aed; }
-        .btn-refresh { background: #3b82f6; color: white; }
-        .btn-logout { background: #64748b; color: white; }
-        .btn-edit { background: #22c55e; color: white; padding: 6px 12px; font-size: 12px; }
-        .btn-del { background: #ef4444; color: white; padding: 6px 12px; font-size: 12px; }
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
-        .table-wrapper { overflow-x: auto; margin-top: 15px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
-        th { background: #f8fafc; font-weight: 700; color: #475569; }
-        td input, td textarea { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
-        td textarea { resize: vertical; height: 50px; }
-        
-        .stats-info { font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: 500; }
-        .section-view { display: none; }
-        .section-view.active { display: block; }
-        
-        #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .auth-card { background: white; padding: 30px; border-radius: 12px; text-align: center; width: 340px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .auth-card h3 { margin-bottom: 15px; color: #ff5e62; }
-        .auth-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; text-align: center; }
-        .auth-card button { width: 100%; padding: 12px; background: #ff5e62; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
-    </style>
-</head>
-<body>
+  const { phone } = req.body;
+  if (!phone || !phone.trim()) {
+    return res.status(400).json({ error: '전화번호를 입력해 주세요.' });
+  }
 
-<div id="authOverlay">
-    <div class="auth-card">
-        <h3>🔑 관리자 로그인</h3>
-        <p style="font-size: 12px; color: #666;">관리자 비밀번호를 입력해 주세요.</p>
-        <input type="password" id="adminPasswordInput" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter') authenticate()">
-        <button onclick="authenticate()">접속하기</button>
-    </div>
-</div>
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+    const cleanPhone = phone.trim();
 
-<div class="container">
-    <h1>
-        <span>📋 ESL 통합 관리 시스템</span>
-        <div class="header-controls">
-            <button class="btn btn-download" onclick="downloadCSV()">📥 CSV 다운로드</button>
-            <button class="btn btn-upload" onclick="triggerCSVUpload()">📤 CSV 업로드</button>
-            <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
-            <a href="check.html" target="_blank" class="btn btn-check">팀 조회 페이지 🔗</a>
-            <button class="btn btn-refresh" onclick="loadCurrentView()">새로고침 🔄</button>
-            <button class="btn btn-logout" onclick="logout()">로그아웃 🔒</button>
-        </div>
-    </h1>
+    // 데이터베이스에서 밋업 그룹 조회
+    const groups = await sql`
+      SELECT * FROM esl_meetup_groups 
+      ORDER BY id DESC;
+    `;
 
-    <div class="tab-menu">
-        <button class="tab-btn active" id="tabInquiries" onclick="switchTab('inquiries')">📋 전체 문의 관리</button>
-        <button class="tab-btn" id="tabMeetups" onclick="switchTab('meetups')">👥 오늘의 밋업 그룹 관리</button>
-    </div>
-
-    <!-- 1. 문의 관리 섹션 -->
-    <div id="viewInquiries" class="section-view active">
-        <div class="stats-info" id="statsInquiries">총 문의 건수: 0건</div>
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>이름</th>
-                        <th>전화번호/카톡</th>
-                        <th>구분</th>
-                        <th>수준</th>
-                        <th>희망 시간</th>
-                        <th>희망 지역</th>
-                        <th>추천인</th>
-                        <th>신청일시</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBodyInquiries">
-                    <tr><td colspan="10" style="text-align:center; padding: 30px;">데이터를 불러오는 중...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- 2. 밋업 그룹 관리 섹션 -->
-    <div id="viewMeetups" class="section-view">
-        <div class="stats-info" id="statsMeetups">오늘 매칭된 그룹: 0개 팀</div>
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 60px;">그룹번호</th>
-                        <th>날짜</th>
-                        <th style="width: 200px;">퍼실리테이터 (Host)</th>
-                        <th>팀원 명단 (수정 가능)</th>
-                        <th style="width: 80px;">관리</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBodyMeetups">
-                    <tr><td colspan="5" style="text-align:center; padding: 30px;">데이터를 불러오는 중...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<script>
-    let adminToken = '';
-    let currentTab = 'inquiries';
-    let rawInquiriesData = [];
-    let rawMeetupsData = [];
-
-    function authenticate() {
-        const pwd = document.getElementById('adminPasswordInput').value.trim();
-        if (!pwd) return alert('비밀번호를 입력하세요.');
-        adminToken = pwd;
-        document.getElementById('authOverlay').style.display = 'none';
-        loadCurrentView();
+    let matchedGroup = null;
+    for (const group of groups) {
+      if (group.members && group.members.includes(cleanPhone)) {
+        matchedGroup = group;
+        break;
+      }
     }
 
-    function logout() {
-        adminToken = '';
-        document.getElementById('adminPasswordInput').value = '';
-        document.getElementById('authOverlay').style.display = 'flex';
+    if (!matchedGroup) {
+      return res.status(404).json({ 
+        success: false, 
+        error: '오늘 날짜로 매칭된 밋업 그룹을 찾을 수 없습니다. (전화번호를 확인해 주세요) 문의가 필요하면 어드민(010-3450-2090)으로 연락하시면 안내드리겠습니다.' 
+      });
     }
 
-    function switchTab(tab) {
-        currentTab = tab;
-        document.getElementById('tabInquiries').classList.toggle('active', tab === 'inquiries');
-        document.getElementById('tabMeetups').classList.toggle('active', tab === 'meetups');
-        document.getElementById('viewInquiries').classList.toggle('active', tab === 'inquiries');
-        document.getElementById('viewMeetups').classList.toggle('active', tab === 'meetups');
-        loadCurrentView();
-    }
+    return res.status(200).json({
+      success: true,
+      data: {
+        group_no: matchedGroup.group_no,
+        facilitator: matchedGroup.facilitator,
+        members: matchedGroup.members,
+        date: matchedGroup.date
+      }
+    });
 
-    function loadCurrentView() {
-        if (currentTab === 'inquiries') fetchInquiries();
-        else fetchMeetups();
-    }
-
-    async function fetchInquiries() {
-        try {
-            const res = await fetch('/api/admin', {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
-            });
-            const result = await res.json();
-            if (res.ok && result.success) {
-                rawInquiriesData = result.data;
-                renderInquiries(rawInquiriesData);
-            } else {
-                alert(result.error || '인증 실패');
-                document.getElementById('authOverlay').style.display = 'flex';
-            }
-        } catch (err) {
-            alert('서버 통신 오류');
-        }
-    }
-
-    function renderInquiries(data) {
-        const tbody = document.getElementById('tableBodyInquiries');
-        tbody.innerHTML = '';
-        document.getElementById('statsInquiries').innerText = `총 문의 건수: ${data.length}건`;
-
-        data.forEach(row => {
-            const tr = document.createElement('tr');
-            const dateStr = new Date(row.created_at).toLocaleString('ko-KR');
-            tr.innerHTML = `
-                <td><b>${row.id}</b></td>
-                <td><input type="text" value="${row.name || ''}" id="name-${row.id}"></td>
-                <td><input type="text" value="${row.phone || ''}" id="phone-${row.id}"></td>
-                <td><input type="text" value="${row.role || ''}" id="role-${row.id}"></td>
-                <td><input type="text" value="${row.level || ''}" id="level-${row.id}"></td>
-                <td><input type="text" value="${row.preferred_time || ''}" id="time-${row.id}"></td>
-                <td><input type="text" value="${row.location || ''}" id="loc-${row.id}"></td>
-                <td><input type="text" value="${row.referrer || ''}" id="ref-${row.id}"></td>
-                <td><small>${dateStr}</small></td>
-                <td>
-                    <button class="btn btn-edit" onclick="updateInquiry(${row.id})">저장</button>
-                    <button class="btn btn-del" onclick="deleteInquiry(${row.id})">삭제</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    async function fetchMeetups() {
-        try {
-            const res = await fetch('/api/admin?type=meetups', {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
-            });
-            const result = await res.json();
-            if (res.ok && result.success) {
-                rawMeetupsData = result.data;
-                renderMeetups(rawMeetupsData);
-            } else {
-                alert(result.error || '인증 실패');
-                document.getElementById('authOverlay').style.display = 'flex';
-            }
-        } catch (err) {
-            alert('서버 통신 오류');
-        }
-    }
-
-    function renderMeetups(data) {
-        const tbody = document.getElementById('tableBodyMeetups');
-        tbody.innerHTML = '';
-        document.getElementById('statsMeetups').innerText = `오늘 매칭된 그룹: ${data.length}개 팀`;
-
-        if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">생성된 밋업 그룹이 없습니다.</td></tr>';
-            return;
-        }
-
-        data.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><b>Group #${row.group_no}</b></td>
-                <td>${row.date}</td>
-                <td><input type="text" value="${row.facilitator || ''}" id="fac-${row.id}"></td>
-                <td><textarea id="mem-${row.id}">${row.members || ''}</textarea></td>
-                <td>
-                    <button class="btn btn-edit" onclick="updateMeetup(${row.id})">수정저장</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    async function updateMeetup(id) {
-        const payload = {
-            target: 'meetup',
-            id,
-            facilitator: document.getElementById(`fac-${id}`).value,
-            members: document.getElementById(`mem-${id}`).value
-        };
-
-        const res = await fetch('/api/admin', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
-            body: JSON.stringify(payload)
-        });
-        const result = await res.json();
-        if (res.ok && result.success) { alert('수정되었습니다.'); fetchMeetups(); }
-        else alert('실패');
-    }
-
-    async function updateInquiry(id) {
-        const payload = {
-            id,
-            name: document.getElementById(`name-${id}`).value,
-            phone: document.getElementById(`phone-${id}`).value,
-            role: document.getElementById(`role-${id}`).value,
-            level: document.getElementById(`level-${id}`).value,
-            preferred_time: document.getElementById(`time-${id}`).value,
-            location: document.getElementById(`loc-${id}`).value,
-            referrer: document.getElementById(`ref-${id}`).value
-        };
-        const res = await fetch('/api/admin', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
-            body: JSON.stringify(payload)
-        });
-        const result = await res.json();
-        if (res.ok && result.success) alert('수정되었습니다.');
-        else alert('실패');
-    }
-
-    async function deleteInquiry(id) {
-        if (!confirm('정말 삭제하시겠습니까?')) return;
-        const res = await fetch('/api/admin', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
-            body: JSON.stringify({ id })
-        });
-        const result = await res.json();
-        if (res.ok && result.success) { alert('삭제되었습니다.'); fetchInquiries(); }
-    }
-
-    /* --- CSV 다운로드 / 업로드 로직 --- */
-    function downloadCSV() {
-        let csvContent = "";
-        let filename = "";
-
-        if (currentTab === 'inquiries') {
-            if (!rawInquiriesData || rawInquiriesData.length === 0) return alert('다운로드할 문의 데이터가 없습니다.');
-            filename = `esl_inquiries_${new Date().toISOString().slice(0,10)}.csv`;
-            const headers = ["ID", "이름", "전화번호", "구분", "수준", "희망시간", "희망지역", "추천인", "신청일시"];
-            csvContent += headers.join(",") + "\n";
-
-            rawInquiriesData.forEach(r => {
-                const row = [
-                    r.id,
-                    `"${(r.name || '').replace(/"/g, '""')}"`,
-                    `"${(r.phone || '').replace(/"/g, '""')}"`,
-                    `"${(r.role || '').replace(/"/g, '""')}"`,
-                    `"${(r.level || '').replace(/"/g, '""')}"`,
-                    `"${(r.preferred_time || '').replace(/"/g, '""')}"`,
-                    `"${(r.location || '').replace(/"/g, '""')}"`,
-                    `"${(r.referrer || '').replace(/"/g, '""')}"`,
-                    `"${new Date(r.created_at).toLocaleString('ko-KR')}"`
-                ];
-                csvContent += row.join(",") + "\n";
-            });
-        } else {
-            if (!rawMeetupsData || rawMeetupsData.length === 0) return alert('다운로드할 밋업 그룹 데이터가 없습니다.');
-            filename = `esl_meetups_${new Date().toISOString().slice(0,10)}.csv`;
-            const headers = ["ID", "그룹번호", "날짜", "퍼실리테이터", "팀원명단"];
-            csvContent += headers.join(",") + "\n";
-
-            rawMeetupsData.forEach(r => {
-                const row = [
-                    r.id,
-                    r.group_no,
-                    `"${r.date}"`,
-                    `"${(r.facilitator || '').replace(/"/g, '""')}"`,
-                    `"${(r.members || '').replace(/"/g, '""')}"`
-                ];
-                csvContent += row.join(",") + "\n";
-            });
-        }
-
-        // 엑셀에서 한글 깨짐 방지를 위한 UTF-8 BOM(0xEF, 0xBB, 0xBF) 추가
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function triggerCSVUpload() {
-        if (currentTab !== 'inquiries') {
-            return alert('CSV 업로드는 [전체 문의 관리] 탭에서만 가능합니다.');
-        }
-        document.getElementById('csvFileInput').click();
-    }
-
-    function handleCSVUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const text = e.target.result;
-            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
-            if (lines.length < 2) return alert('유효한 CSV 파일이 아닙니다.');
-
-            // 첫 번째 줄(헤더) 제외 처리
-            const items = [];
-            for (let i = 1; i < lines.length; i++) {
-                // 따옴표 포함 쉼표 분할 정규식
-                const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-                if (cols.length >= 2) {
-                    const clean = idx => cols[idx] ? cols[idx].replace(/^"|"$/g, '').trim() : '';
-                    items.push({
-                        name: clean(0),
-                        phone: clean(1),
-                        role: clean(2) || 'Korean Learner',
-                        level: clean(3) || 'Intermediate',
-                        preferred_time: clean(4) || '온라인 저녁 (20:00 ~ 21:30)',
-                        location: clean(5) || '장소 상관없음 / 온라인 위주',
-                        referrer: clean(6) || 'CSV 업로드'
-                    });
-                }
-            }
-
-            if (items.length === 0) return alert('파싱된 데이터가 없습니다.');
-
-            if (!confirm(`총 ${items.length}건의 데이터를 등록하시겠습니까?`)) return;
-
-            try {
-                const res = await fetch('/api/admin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${adminToken}`
-                    },
-                    body: JSON.stringify({ items })
-                });
-                const result = await res.json();
-                if (res.ok && result.success) {
-                    alert(`성공적으로 ${items.length}건의 데이터가 업로드 되었습니다.`);
-                    fetchInquiries();
-                } else {
-                    alert('업로드 실패: ' + result.error);
-                }
-            } catch (err) {
-                alert('업로드 통신 중 오류가 발생했습니다.');
-            }
-            document.getElementById('csvFileInput').value = '';
-        };
-        reader.readAsText(file, 'UTF-8');
-    }
-</script>
-</body>
-</html>
+  } catch (error) {
+    console.error('Check Group API Error details:', error);
+    return res.status(500).json({ success: false, error: '서버 내부 오류가 발생했습니다: ' + error.message });
+  }
+}
