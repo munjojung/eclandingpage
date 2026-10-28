@@ -27,6 +27,10 @@
         .btn-edit { background: #22c55e; color: white; padding: 6px 12px; font-size: 12px; }
         .btn-del { background: #ef4444; color: white; padding: 6px 12px; font-size: 12px; }
 
+        .filter-box { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .filter-box label { font-size: 13px; font-weight: bold; color: #475569; }
+        .filter-box input[type="date"] { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; }
+
         .table-wrapper { overflow-x: auto; margin-top: 15px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
@@ -71,7 +75,7 @@
 
     <div class="tab-menu">
         <button class="tab-btn active" id="tabInquiries" onclick="switchTab('inquiries')">📋 전체 문의 관리</button>
-        <button class="tab-btn" id="tabMeetups" onclick="switchTab('meetups')">👥 오늘의 밋업 그룹 관리</button>
+        <button class="tab-btn" id="tabMeetups" onclick="switchTab('meetups')">👥 밋업 그룹 관리 (누적/조회)</button>
     </div>
 
     <!-- 1. 문의 관리 섹션 -->
@@ -102,13 +106,19 @@
 
     <!-- 2. 밋업 그룹 관리 섹션 -->
     <div id="viewMeetups" class="section-view">
-        <div class="stats-info" id="statsMeetups">오늘 매칭된 그룹: 0개 팀</div>
+        <div class="filter-box">
+            <label for="filterDate">📅 날짜별 조회:</label>
+            <input type="date" id="filterDate" onchange="fetchMeetups()">
+            <button class="btn btn-refresh" onclick="document.getElementById('filterDate').value=''; fetchMeetups();">전체 날짜 보기</button>
+        </div>
+
+        <div class="stats-info" id="statsMeetups">매칭된 그룹: 0개 팀</div>
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
                         <th style="width: 60px;">그룹번호</th>
-                        <th>날짜</th>
+                        <th style="width: 110px;">날짜</th>
                         <th style="width: 200px;">퍼실리테이터 (Host)</th>
                         <th>팀원 명단 (수정 가능)</th>
                         <th style="width: 80px;">관리</th>
@@ -202,14 +212,23 @@
     }
 
     async function fetchMeetups() {
+        const filterDate = document.getElementById('filterDate').value;
+        let url = '/api/admin?type=meetups';
+        if (filterDate) url += `&date=${filterDate}`;
+
         try {
-            const res = await fetch('/api/admin?type=meetups', {
+            const res = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${adminToken}` }
             });
             const result = await res.json();
             if (res.ok && result.success) {
                 rawMeetupsData = result.data;
                 renderMeetups(rawMeetupsData);
+
+                // 70일 이상 경과 데이터 자동 감지 및 CSV 자동 백업 안내
+                if (result.archived_candidates && result.archived_candidates.length > 0) {
+                    autoArchiveOldMeetups(result.archived_candidates);
+                }
             } else {
                 alert(result.error || '인증 실패');
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -219,13 +238,37 @@
         }
     }
 
+    function autoArchiveOldMeetups(oldItems) {
+        alert(`📦 [70일 이전 데이터 감지]\n${oldItems.length}건의 밋업 데이터가 70일을 넘었습니다.\nCSV 파일로 자동 백업 후 DB에서 백업 정리가 진행됩니다.`);
+
+        let csvContent = "ID,그룹번호,날짜,퍼실리테이터,팀원명단\n";
+        oldItems.forEach(r => {
+            csvContent += `${r.id},${r.group_no},"${r.date}","${(r.facilitator || '').replace(/"/g, '""')}","${(r.members || '').replace(/"/g, '""')}"\n`;
+        });
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `esl_meetups_archived_70days_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // DB에서 70일 넘은 데이터 삭제 정리
+        fetch('/api/admin', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            body: JSON.stringify({ archive_old: true })
+        });
+    }
+
     function renderMeetups(data) {
         const tbody = document.getElementById('tableBodyMeetups');
         tbody.innerHTML = '';
-        document.getElementById('statsMeetups').innerText = `오늘 매칭된 그룹: ${data.length}개 팀`;
+        document.getElementById('statsMeetups').innerText = `매칭된 그룹: ${data.length}개 팀`;
 
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">생성된 밋업 그룹이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">조회된 밋업 그룹이 없습니다.</td></tr>';
             return;
         }
 
@@ -233,7 +276,7 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><b>Group #${row.group_no}</b></td>
-                <td>${row.date}</td>
+                <td><b>${row.date}</b></td>
                 <td><input type="text" value="${row.facilitator || ''}" id="fac-${row.id}"></td>
                 <td><textarea id="mem-${row.id}">${row.members || ''}</textarea></td>
                 <td>
@@ -294,7 +337,6 @@
         if (res.ok && result.success) { alert('삭제되었습니다.'); fetchInquiries(); }
     }
 
-    /* --- CSV 다운로드 / 업로드 로직 --- */
     function downloadCSV() {
         let csvContent = "";
         let filename = "";
@@ -337,7 +379,6 @@
             });
         }
 
-        // 엑셀 한글 깨짐 방지용 UTF-8 BOM(\uFEFF) 추가
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
