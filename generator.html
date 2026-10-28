@@ -216,7 +216,7 @@
             전체 (2페이지 보기)
           </button>
           <button id="tabPage1" onclick="switchTab('page1')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500 hover:text-slate-700">
-            Page 1 (Daily Questions)
+            Page 1 (Daily Talk & Share)
           </button>
           <button id="tabPage2" onclick="switchTab('page2')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500 hover:text-slate-700">
             Page 2 (Essay Topic)
@@ -243,7 +243,7 @@
       <!-- PRINTABLE CONTENT CONTAINER -->
       <div id="printableContent" class="print-container space-y-8">
         
-        <!-- PAGE 1: DAILY QUESTION SHEET -->
+        <!-- PAGE 1: DAILY TALK & SHARE SHEET -->
         <div id="page1View" class="worksheet-page bg-white p-8 md:p-10 rounded-2xl shadow-md border border-slate-200 text-slate-900 mx-auto max-w-[210mm] min-h-[297mm] flex flex-col justify-between relative">
           
           <div>
@@ -251,7 +251,7 @@
             <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
               <div>
                 <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta" id="p1WeekText">40주차 · 수목일 DQ</div>
-                <h2 class="text-2xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p1TitleText">Daily Question</h2>
+                <h2 class="text-2xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p1TitleText">Daily Talk & Share</h2>
                 <p class="text-xs font-semibold text-skybrand-600 font-jakarta">Let's talk about <span id="p1TopicText">Mountain Hiking & Trekking</span></p>
               </div>
               <div class="text-right flex flex-col items-end">
@@ -262,7 +262,7 @@
 
             <!-- Questions Container -->
             <div id="dqQuestionsContainer" class="space-y-3.5 text-xs sm:text-sm">
-              <!-- Dynamically populated 10 Daily Questions -->
+              <!-- Dynamically populated 10 Daily Talk & Share -->
             </div>
           </div>
 
@@ -593,7 +593,7 @@
 
       // Page 1 Headers
       document.getElementById('p1WeekText').innerText = data.weekInfo || getFormattedKoreanDate();
-      document.getElementById('p1TitleText').innerText = data.page1.title || "Daily Question";
+      document.getElementById('p1TitleText').innerText = data.page1.title || "Daily Talk & Share";
       document.getElementById('p1TopicText').innerText = data.page1.subTopic || data.topic;
 
       // Render Page 1 Questions
@@ -697,7 +697,7 @@
 The slogan of English Community is "Speak Freely, Connect Deeply.".
 Create a structured 2-page learning worksheet about the topic: "${customTopic}".
 
-Page 1 (Daily Questions):
+Page 1 (Daily Talk & Share):
 - Exactly 10 numbered open-ended discussion questions.
 - For each question, provide 2 sample response choices in English with accurate Korean translations.
 
@@ -713,7 +713,7 @@ Output ONLY raw JSON matching this structure without any markdown fencing or ext
   "weekInfo": "${weekInfo}",
   "topic": "${customTopic}",
   "page1": {
-    "title": "Daily Question",
+    "title": "Daily Talk & Share",
     "subTopic": "${customTopic}",
     "questions": [
       {
@@ -885,7 +885,7 @@ Output ONLY raw JSON matching this structure without any markdown fencing or ext
     function copyContentAsMarkdown() {
       if (!currentData) return;
       let text = `# English Community Worksheets: ${currentData.weekInfo} - ${currentData.topic}\n\n`;
-      text += `## PAGE 1: Daily Questions\n`;
+      text += `## PAGE 1: Daily Talk & Share\n`;
       currentData.page1.questions.forEach(q => {
         text += `${q.q}\n`;
         q.answers.forEach(a => text += `- ${a.en} (${a.kr})\n`);
