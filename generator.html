@@ -250,7 +250,7 @@
             <!-- Header section -->
             <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
               <div>
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta" id="p1WeekText">40주차 · 수목일 DQ</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta" id="p1WeekText">40주차 · 수목일 Talk</div>
                 <h2 class="text-2xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p1TitleText">Daily Talk & Share</h2>
                 <p class="text-xs font-semibold text-skybrand-600 font-jakarta">Let's talk about <span id="p1TopicText">Mountain Hiking & Trekking</span></p>
               </div>
@@ -262,7 +262,7 @@
 
             <!-- Questions Container -->
             <div id="dqQuestionsContainer" class="space-y-3.5 text-xs sm:text-sm">
-              <!-- Dynamically populated 10 Daily Talk & Share -->
+              <!-- Dynamically populated 10 Daily Talk & Share questions -->
             </div>
           </div>
 
@@ -505,7 +505,6 @@
 
     // Initialize App on DOM Load
     window.addEventListener('DOMContentLoaded', () => {
-      // Auto fill today's formatted date into input
       document.getElementById('weekInfoInput').value = getFormattedKoreanDate();
 
       loadApiKey();
@@ -682,7 +681,7 @@
       });
     }
 
-    // GEMINI API INTEGRATION FUNCTION
+    // GEMINI API INTEGRATION FUNCTION (Updated with gemini-3.8-flash)
     async function generateWorksheetWithGemini() {
       const apiKey = localStorage.getItem('gemini_api_key') || '';
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Mountain Hiking';
