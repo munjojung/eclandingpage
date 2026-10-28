@@ -15,9 +15,13 @@
         .tab-btn { padding: 8px 16px; border: none; background: #e2e8f0; color: #475569; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .tab-btn.active { background: #3b82f6; color: white; }
 
-        .btn { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; }
+        .btn { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
         .btn-check { background: #0ea5e9; color: white; }
         .btn-check:hover { background: #0284c7; }
+        .btn-download { background: #10b981; color: white; }
+        .btn-download:hover { background: #059669; }
+        .btn-upload { background: #8b5cf6; color: white; }
+        .btn-upload:hover { background: #7c3aed; }
         .btn-refresh { background: #3b82f6; color: white; }
         .btn-logout { background: #64748b; color: white; }
         .btn-edit { background: #22c55e; color: white; padding: 6px 12px; font-size: 12px; }
@@ -56,6 +60,9 @@
     <h1>
         <span>📋 ESL 통합 관리 시스템</span>
         <div class="header-controls">
+            <button class="btn btn-download" onclick="downloadCSV()">📥 CSV 다운로드</button>
+            <button class="btn btn-upload" onclick="triggerCSVUpload()">📤 CSV 업로드</button>
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
             <a href="check.html" target="_blank" class="btn btn-check">팀 조회 페이지 🔗</a>
             <button class="btn btn-refresh" onclick="loadCurrentView()">새로고침 🔄</button>
             <button class="btn btn-logout" onclick="logout()">로그아웃 🔒</button>
@@ -118,6 +125,8 @@
 <script>
     let adminToken = '';
     let currentTab = 'inquiries';
+    let rawInquiriesData = [];
+    let rawMeetupsData = [];
 
     function authenticate() {
         const pwd = document.getElementById('adminPasswordInput').value.trim();
@@ -154,7 +163,8 @@
             });
             const result = await res.json();
             if (res.ok && result.success) {
-                renderInquiries(result.data);
+                rawInquiriesData = result.data;
+                renderInquiries(rawInquiriesData);
             } else {
                 alert(result.error || '인증 실패');
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -198,7 +208,8 @@
             });
             const result = await res.json();
             if (res.ok && result.success) {
-                renderMeetups(result.data);
+                rawMeetupsData = result.data;
+                renderMeetups(rawMeetupsData);
             } else {
                 alert(result.error || '인증 실패');
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -214,7 +225,7 @@
         document.getElementById('statsMeetups').innerText = `오늘 매칭된 그룹: ${data.length}개 팀`;
 
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">오늘 생성된 밋업 그룹이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">생성된 밋업 그룹이 없습니다.</td></tr>';
             return;
         }
 
@@ -247,10 +258,8 @@
             body: JSON.stringify(payload)
         });
         const result = await res.json();
-        if (res.ok && result.success) {
-            alert('수정되었습니다.');
-            fetchMeetups();
-        } else alert('실패');
+        if (res.ok && result.success) { alert('수정되었습니다.'); fetchMeetups(); }
+        else alert('실패');
     }
 
     async function updateInquiry(id) {
@@ -262,7 +271,7 @@
             level: document.getElementById(`level-${id}`).value,
             preferred_time: document.getElementById(`time-${id}`).value,
             location: document.getElementById(`loc-${id}`).value,
-            referrer: document.getElementById(`ref-${id}` ).value
+            referrer: document.getElementById(`ref-${id}`).value
         };
         const res = await fetch('/api/admin', {
             method: 'PUT',
@@ -283,6 +292,121 @@
         });
         const result = await res.json();
         if (res.ok && result.success) { alert('삭제되었습니다.'); fetchInquiries(); }
+    }
+
+    /* --- CSV 다운로드 / 업로드 로직 --- */
+    function downloadCSV() {
+        let csvContent = "";
+        let filename = "";
+
+        if (currentTab === 'inquiries') {
+            if (!rawInquiriesData || rawInquiriesData.length === 0) return alert('다운로드할 문의 데이터가 없습니다.');
+            filename = `esl_inquiries_${new Date().toISOString().slice(0,10)}.csv`;
+            const headers = ["ID", "이름", "전화번호", "구분", "수준", "희망시간", "희망지역", "추천인", "신청일시"];
+            csvContent += headers.join(",") + "\n";
+
+            rawInquiriesData.forEach(r => {
+                const row = [
+                    r.id,
+                    `"${(r.name || '').replace(/"/g, '""')}"`,
+                    `"${(r.phone || '').replace(/"/g, '""')}"`,
+                    `"${(r.role || '').replace(/"/g, '""')}"`,
+                    `"${(r.level || '').replace(/"/g, '""')}"`,
+                    `"${(r.preferred_time || '').replace(/"/g, '""')}"`,
+                    `"${(r.location || '').replace(/"/g, '""')}"`,
+                    `"${(r.referrer || '').replace(/"/g, '""')}"`,
+                    `"${new Date(r.created_at).toLocaleString('ko-KR')}"`
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+        } else {
+            if (!rawMeetupsData || rawMeetupsData.length === 0) return alert('다운로드할 밋업 그룹 데이터가 없습니다.');
+            filename = `esl_meetups_${new Date().toISOString().slice(0,10)}.csv`;
+            const headers = ["ID", "그룹번호", "날짜", "퍼실리테이터", "팀원명단"];
+            csvContent += headers.join(",") + "\n";
+
+            rawMeetupsData.forEach(r => {
+                const row = [
+                    r.id,
+                    r.group_no,
+                    `"${r.date}"`,
+                    `"${(r.facilitator || '').replace(/"/g, '""')}"`,
+                    `"${(r.members || '').replace(/"/g, '""')}"`
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+        }
+
+        // 엑셀 한글 깨짐 방지용 UTF-8 BOM(\uFEFF) 추가
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function triggerCSVUpload() {
+        if (currentTab !== 'inquiries') {
+            return alert('CSV 업로드는 [전체 문의 관리] 탭에서만 가능합니다.');
+        }
+        document.getElementById('csvFileInput').click();
+    }
+
+    function handleCSVUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const text = e.target.result;
+            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) return alert('유효한 CSV 파일이 아닙니다.');
+
+            const items = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+                if (cols.length >= 2) {
+                    const clean = idx => cols[idx] ? cols[idx].replace(/^"|"$/g, '').trim() : '';
+                    items.push({
+                        name: clean(0),
+                        phone: clean(1),
+                        role: clean(2) || 'Korean Learner',
+                        level: clean(3) || 'Intermediate',
+                        preferred_time: clean(4) || '온라인 저녁 (20:00 ~ 21:30)',
+                        location: clean(5) || '장소 상관없음 / 온라인 위주',
+                        referrer: clean(6) || 'CSV 업로드'
+                    });
+                }
+            }
+
+            if (items.length === 0) return alert('파싱된 데이터가 없습니다.');
+
+            if (!confirm(`총 ${items.length}건의 데이터를 등록하시겠습니까?`)) return;
+
+            try {
+                const res = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: JSON.stringify({ items })
+                });
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    alert(`성공적으로 ${items.length}건의 데이터가 업로드되었습니다.`);
+                    fetchInquiries();
+                } else {
+                    alert('업로드 실패: ' + result.error);
+                }
+            } catch (err) {
+                alert('업로드 통신 중 오류가 발생했습니다.');
+            }
+            document.getElementById('csvFileInput').value = '';
+        };
+        reader.readAsText(file, 'UTF-8');
     }
 </script>
 </body>
