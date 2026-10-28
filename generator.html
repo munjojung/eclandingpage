@@ -186,7 +186,7 @@
                 <p class="text-xs text-slate-500 mt-1">질문 문항 및 에세이 표현을 구성하고 있습니다. 잠시만 기다려 주세요.</p>
             </div>
 
-            <!-- PAGE 1: Daily Talk & Share (A4) -->
+            <!-- PAGE 1: Daily Questions (A4) -->
             <div id="page1" class="a4-page print-page relative flex flex-col justify-between border border-slate-200">
                 <div>
                     <!-- Header -->
@@ -196,7 +196,7 @@
                             <div class="text-xs font-semibold text-sky-600 uppercase tracking-wider mt-0.5">Speak Freely, Connect Deeply.</div>
                         </div>
                         <div class="text-right">
-                            <div class="text-xs font-bold bg-navy-900 text-white px-2.5 py-1 rounded">Daily Talk & Share</div>
+                            <div class="text-xs font-bold bg-navy-900 text-white px-2.5 py-1 rounded">Daily Question</div>
                             <div id="p1Date" class="text-xs text-slate-500 mt-1 font-medium"></div>
                         </div>
                     </div>
@@ -283,7 +283,7 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Default Sample Data (Mountain Hiking Topic)
+        // Default Sample Data
         const sampleWorksheet = {
             id: 'sample-1',
             dateStr: getFormattedKoreanDate(),
@@ -391,7 +391,7 @@
 
         function saveToHistory(item) {
             const history = getStoredHistory();
-            history.unshift(item); // Add to front
+            history.unshift(item);
             localStorage.setItem('ec_worksheet_history', JSON.stringify(history));
             renderHistoryList();
         }
@@ -410,12 +410,11 @@
             document.getElementById('p1Date').innerText = data.dateStr;
             document.getElementById('p2Date').innerText = data.dateStr;
 
-            // Page 1
             document.getElementById('p1Title').innerText = data.page1.title || `Let's talk about ${data.topic}`;
             const p1Container = document.getElementById('p1Questions');
             p1Container.innerHTML = '';
 
-            data.page1.questions.forEach((q, idx) => {
+            data.page1.questions.forEach((q) => {
                 p1Container.innerHTML += `
                     <div class="border border-slate-200 rounded-lg p-2.5 bg-white space-y-1">
                         <div class="font-bold text-navy-900">${q.q}</div>
@@ -431,7 +430,6 @@
                 `;
             });
 
-            // Page 2 - Today Expressions
             const p2Today = document.getElementById('p2TodayExpr');
             p2Today.innerHTML = '';
             data.page2.todayExpr.forEach((item, idx) => {
@@ -443,7 +441,6 @@
                 `;
             });
 
-            // Page 2 - Review Expressions
             const p2Review = document.getElementById('p2ReviewExpr');
             p2Review.innerHTML = '';
             data.page2.reviewExpr.forEach((item, idx) => {
@@ -455,12 +452,10 @@
                 `;
             });
 
-            // Page 2 - Story Text Format
             let formattedStory = data.page2.story;
             formattedStory = formattedStory.replace(/\*\*(.*?)\*\*/g, '<highlight>$1</highlight>');
             document.getElementById('p2Story').innerHTML = formattedStory;
 
-            // Page 2 - Discussion
             const p2Disc = document.getElementById('p2Discussion');
             p2Disc.innerHTML = '';
             data.page2.discussionQuestions.forEach((item, idx) => {
@@ -476,7 +471,6 @@
             });
         }
 
-        // Render History Items List
         function renderHistoryList() {
             const history = getStoredHistory();
             const search = document.getElementById('historySearch').value.toLowerCase();
@@ -512,7 +506,7 @@
             if (target) renderWorksheet(target);
         }
 
-        // Gemini API Generation Request
+        // Gemini API Generation Request (Using gemini-3.8-flash)
         async function generateWorksheetWithAI() {
             const apiKey = getSavedApiKey();
             if (!apiKey) {
@@ -539,7 +533,7 @@ Topic: "${topic}"
 Date Label: "${dateStr}"
 
 Requirements:
-Page 1 (Daily Talk & Share):
+Page 1 (Daily Questions):
 - 5 comprehensive discussion questions related to "${topic}".
 - For each question, provide 2 distinct answer options (A1 & A2) in English with Korean translation (T1 & T2).
 
@@ -581,7 +575,7 @@ Return strictly JSON matching this structure without Markdown blocks:
             `;
 
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -590,9 +584,12 @@ Return strictly JSON matching this structure without Markdown blocks:
                 });
 
                 const data = await response.json();
-                const rawText = data.candidates[0].content.parts[0].text;
                 
-                // Clean markdown code blocks if present
+                if (!response.ok || !data.candidates) {
+                    throw new Error(data.error?.message || 'API 요청 실패');
+                }
+
+                const rawText = data.candidates[0].content.parts[0].text;
                 const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
                 const parsed = JSON.parse(cleanJson);
 
@@ -609,7 +606,7 @@ Return strictly JSON matching this structure without Markdown blocks:
 
             } catch (err) {
                 console.error(err);
-                alert('학습지 생성 중 오류가 발생했습니다. API Key 및 주제를 확인해 주세요.');
+                alert(`학습지 생성 중 오류가 발생했습니다: ${err.message || 'API Key 및 설정을 확인해 주세요.'}`);
             } finally {
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 document.getElementById('generateBtn').disabled = false;
@@ -618,16 +615,13 @@ Return strictly JSON matching this structure without Markdown blocks:
 
         // Initialize Page
         window.addEventListener('DOMContentLoaded', () => {
-            // Load saved key
             const savedKey = getSavedApiKey();
             if (savedKey) {
                 document.getElementById('apiKeyInput').value = savedKey;
             }
 
-            // Set today date
             document.getElementById('publishDate').value = getFormattedKoreanDate();
 
-            // Load History and render sample
             renderHistoryList();
             const history = getStoredHistory();
             if (history.length > 0) {
