@@ -22,7 +22,7 @@
 
         .submit-btn { width: 100%; padding: 14px; margin-top: 10px; background: linear-gradient(90deg, #ff7e5f 0%, #feb47b 100%); border: none; border-radius: 25px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 126, 95, 0.4); }
         .submit-btn:hover { opacity: 0.95; }
-        .link-container { margin-top: 20px; display: flex; justify-content: space-between; font-size: 13px; }
+        .link-container { margin-top: 20px; display: flex; justify-content: flex-end; font-size: 13px; }
         .link-container a { color: #0284c7; text-decoration: none; font-weight: 600; }
         .link-container a:hover { text-decoration: underline; }
     </style>
@@ -74,7 +74,6 @@
     </form>
 
     <div class="link-container">
-        <a href="index.html">&larr; 첫 화면으로</a>
         <a href="check.html">내 팀 확인하기 &rarr;</a>
     </div>
 </div>
@@ -92,7 +91,6 @@
         const phone = document.getElementById('phone').value.trim();
         const target_date = document.getElementById('target_date').value;
 
-        // 체크된 시간대들을 배열로 수집 후 쉼표로 결합
         const checkedTimes = Array.from(document.querySelectorAll('input[name="time_slot"]:checked'))
                                   .map(el => el.value);
 
