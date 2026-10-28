@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESL 밋업 일정 등록</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; }
+        body { width: 100vw; min-height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #ff9966 0%, #ff5e62 50%, #ffbb33 100%); padding: 20px 0; }
+        .card { background-color: #ffffff; width: 90%; max-width: 440px; padding: 40px 30px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12); text-align: center; position: relative; }
+        .title { font-size: 26px; font-weight: 800; color: #ff5e62; margin-bottom: 6px; }
+        .subtitle { font-size: 13px; color: #555555; margin-bottom: 20px; font-weight: 600; line-height: 1.4; }
+        .notice-box { background: #fff5f5; border: 1px dashed #ff5e62; padding: 12px; border-radius: 8px; font-size: 12px; color: #c53030; margin-bottom: 20px; text-align: left; line-height: 1.5; }
+        .form-group { text-align: left; margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; color: #333; margin-bottom: 6px; font-weight: 700; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; background: #fff; }
+        .form-group input:focus, .form-group select:focus { border-color: #ff5e62; }
+        .submit-btn { width: 100%; padding: 14px; margin-top: 10px; background: linear-gradient(90deg, #ff7e5f 0%, #feb47b 100%); border: none; border-radius: 25px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 126, 95, 0.4); }
+        .submit-btn:hover { opacity: 0.95; }
+        .link-container { margin-top: 20px; display: flex; justify-content: space-between; font-size: 13px; }
+        .link-container a { color: #0284c7; text-decoration: none; font-weight: 600; }
+        .link-container a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="title">📅 밋업 일정 등록</div>
+    <div class="subtitle">내일 모임 참석 여부를 미리 등록해 주세요!</div>
+
+    <div class="notice-box">
+        <b>💡 안내 사항</b><br>
+        • 내일 모임 일정은 <b>오늘 오후 5시(17:00)까지</b> 등록해 주세요.<br>
+        • 매일 <b>17:30에 팀 배정</b>이 완료되며, [팀 확인하기] 페이지에서 조회하실 수 있습니다.
+    </div>
+
+    <form id="scheduleForm">
+        <div class="form-group">
+            <label for="name">이름</label>
+            <input type="text" id="name" placeholder="홍길동" required>
+        </div>
+
+        <div class="form-group">
+            <label for="phone">전화번호 (조회용)</label>
+            <input type="text" id="phone" placeholder="010-1234-5678" required>
+        </div>
+
+        <div class="form-group">
+            <label for="target_date">참여 희망 날짜 (내일)</label>
+            <input type="date" id="target_date" required>
+        </div>
+
+        <div class="form-group">
+            <label for="time_slot">참여 시간대</label>
+            <select id="time_slot" required>
+                <option value="Offline Day (11:00 ~ 13:00)">오프라인 낮 (11:00 ~ 13:00)</option>
+                <option value="Online Night (20:00 ~ 21:30)" selected>온라인 저녁 (20:00 ~ 21:30)</option>
+            </select>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">일정 등록하기 ✨</button>
+    </form>
+
+    <div class="link-container">
+        <a href="index.html">&larr; 첫 화면으로</a>
+        <a href="check.html">내 팀 확인하기 &rarr;</a>
+    </div>
+</div>
+
+<script>
+    // 기본 날짜를 내일 날짜로 자동 설정
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('target_date').value = tomorrow.toISOString().slice(0, 10);
+
+    document.getElementById('scheduleForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const payload = {
+            name: document.getElementById('name').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            target_date: document.getElementById('target_date').value,
+            time_slot: document.getElementById('time_slot').value
+        };
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+
+            if (res.ok && result.success) {
+                alert(result.message);
+                document.getElementById('scheduleForm').reset();
+                // 날짜 재설정
+                document.getElementById('target_date').value = tomorrow.toISOString().slice(0, 10);
+            } else {
+                alert('등록 실패: ' + (result.error || '알 수 없는 오류'));
+            }
+        } catch (err) {
+            alert('서버 통신 중 오류가 발생했습니다.');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>

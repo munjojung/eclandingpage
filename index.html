@@ -136,12 +136,18 @@
             padding-top: 15px;
             border-top: 1px solid #eee;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
         .check-link-box a {
             font-size: 13px;
             color: #0284c7;
             text-decoration: none;
             font-weight: 600;
+        }
+        .check-link-box a.schedule-link {
+            color: #ff5e62;
         }
         .check-link-box a:hover {
             text-decoration: underline;
@@ -233,9 +239,10 @@
         <button type="submit" class="submit-btn" id="submitBtn">언어교환 문의하기 ✨</button>
     </form>
 
-    <!-- 밋업 팀 조회 링크 추가 -->
+    <!-- 하단 링크 영역 (팀 조회 및 일정 등록) -->
     <div class="check-link-box">
         <a href="check.html" target="_blank" id="checkLinkText">🔍 오늘 내 밋업 팀 확인하기 &rarr;</a>
+        <a href="schedule.html" target="_blank" id="scheduleLinkText" class="schedule-link">📅 내일 모임 일정 등록하러 가기 &rarr;</a>
     </div>
 </div>
 
@@ -270,6 +277,7 @@
             txtPrivacy: '[필수] 입력 정보는 언어교환 매칭 안내 목적으로만 활용됩니다.',
             submitBtn: '언어교환 문의하기 ✨',
             checkLink: '🔍 오늘 내 밋업 팀 확인하기 →',
+            scheduleLink: '📅 내일 모임 일정 등록하러 가기 →',
             successMsg: '문의 등록이 성공적으로 완료되었습니다!',
             errorMsg: '제출 중 오류가 발생했습니다. 다시 시도해 주세요.'
         },
@@ -300,6 +308,7 @@
             txtPrivacy: '[Required] Your contact details will strictly be used for coordination & matching.',
             submitBtn: 'Apply for Language Exchange ✨',
             checkLink: '🔍 Check My Today’s Meetup Team →',
+            scheduleLink: '📅 Register Tomorrow’s Meetup Schedule →',
             successMsg: 'Your inquiry has been successfully submitted!',
             errorMsg: 'An error occurred. Please try again.'
         }
@@ -341,6 +350,7 @@
 
         document.getElementById('submitBtn').innerText = t.submitBtn;
         document.getElementById('checkLinkText').innerText = t.checkLink;
+        document.getElementById('scheduleLinkText').innerText = t.scheduleLink;
     }
 
     document.getElementById('contactForm').addEventListener('submit', async function(e) {
