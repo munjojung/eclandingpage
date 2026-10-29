@@ -149,7 +149,7 @@
       renderList(filtered);
     }
 
-    // 💡 새 탭(about:blank) 창을 띄우지 않고 숨겨진 iframe으로 바로 PDF 창을 호출하는 함수
+    // 💡 브라우저 상단/하단 인쇄 문구(시각, 제목, URL)를 제거한 PDF 저장 함수
     function downloadPDF(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
@@ -164,17 +164,78 @@
         <html lang="ko">
         <head>
           <meta charset="UTF-8">
-          <title>EnglishCommunity_${target.topic.replace(/\s+/g, '_')}</title>
+          <title></title> <!-- 제목을 비워 상단 제목 텍스트 제거 -->
           <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
           <style>
-            @page { size: A4; margin: 10mm; }
-            body { font-family: 'Noto Sans KR', sans-serif; color: #0f172a; margin: 0; background: white; -webkit-print-color-adjust: exact; }
-            .page { width: 190mm; height: 277mm; max-height: 277mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; box-sizing: border-box; overflow: hidden; margin: 0 auto; }
-            .page:last-child { page-break-after: avoid; }
-            .header { border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; }
-            .footer { border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9.5px; color: #64748b; }
-            .checkbox { width: 11px; height: 11px; border: 1.5px solid #0284c7; display: inline-block; margin-right: 5px; border-radius: 2px; vertical-align: middle; flex-shrink: 0; }
-            .highlight { background-color: #e0f2fe; color: #0369a1; font-weight: 700; padding: 1px 3px; border-radius: 3px; border: 1px solid #bae6fd; }
+            /* 브라우저 상단/하단 머리글·바닥글(날짜, 제목, URL) 인쇄 억제 */
+            @page { 
+              size: A4; 
+              margin: 10mm;
+            }
+            @media print {
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+            }
+            body { 
+              font-family: 'Noto Sans KR', sans-serif; 
+              color: #0f172a; 
+              margin: 0; 
+              padding: 0;
+              background: white; 
+              -webkit-print-color-adjust: exact; 
+              print-color-adjust: exact;
+            }
+            .page { 
+              width: 190mm; 
+              height: 275mm; 
+              max-height: 275mm; 
+              display: flex; 
+              flex-direction: column; 
+              justify-content: space-between; 
+              page-break-after: always; 
+              box-sizing: border-box; 
+              overflow: hidden; 
+              margin: 0 auto; 
+            }
+            .page:last-child { 
+              page-break-after: avoid; 
+            }
+            .header { 
+              border-bottom: 2px solid #0f172a; 
+              padding-bottom: 6px; 
+              margin-bottom: 10px; 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: flex-start; 
+            }
+            .footer { 
+              border-top: 1px solid #e2e8f0; 
+              padding-top: 6px; 
+              display: flex; 
+              justify-content: space-between; 
+              font-size: 9.5px; 
+              color: #64748b; 
+            }
+            .checkbox { 
+              width: 11px; 
+              height: 11px; 
+              border: 1.5px solid #0284c7; 
+              display: inline-block; 
+              margin-right: 5px; 
+              border-radius: 2px; 
+              vertical-align: middle; 
+              flex-shrink: 0; 
+            }
+            .highlight { 
+              background-color: #e0f2fe; 
+              color: #0369a1; 
+              font-weight: 700; 
+              padding: 1px 3px; 
+              border-radius: 3px; 
+              border: 1px solid #bae6fd; 
+            }
           </style>
         </head>
         <body>
@@ -283,7 +344,6 @@
       iframeDoc.write(htmlContent);
       iframeDoc.close();
 
-      // 렌더링 준비 완료 후 오프스크린 인쇄 호출 (새 탭 미생성)
       setTimeout(() => {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
