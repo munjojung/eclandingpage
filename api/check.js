@@ -59,7 +59,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 💡 P0 보안 개선: 형식만 맞으면 통과되던 취약점 및 DB 에러 시 무조건 성공하던 Fallback 제거
+    // 💡 P0 보안 개선: 형식만 맞으면 통과되던 취약점 및 DB 에러 시 무조건 성공하던 Fallback 완전 차단
     return res.status(403).json({ 
       success: false, 
       error: '등록되지 않은 휴대폰 번호입니다. 번호를 다시 확인해 주세요.' 
