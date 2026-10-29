@@ -149,14 +149,13 @@
       renderList(filtered);
     }
 
-    // 💡 여백 최소화 및 완벽한 피팅 레이아웃이 적용된 PDF 다운로드 함수
+    // 💡 여백 최소화 피팅 + 발행일자가 English Community 위로 이동된 PDF 다운로드 함수
     function downloadPDF(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
 
       showToast('PDF 저장 창을 불러오는 중입니다...', 'info');
 
-      // 연월일시 구하기 (예: 20261029_1430)
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -256,11 +255,12 @@
             <div>
               <div class="header">
                 <div>
-                  <div style="font-size: 9.5px; color: #64748b; font-weight: 600;">${target.weekInfo || ''}</div>
                   <h2 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 1px 0 1px 0;">Daily Talk & Share</h2>
                   <p style="font-size: 9.5px; color: #0284c7; font-weight: 700; margin: 0;">Let's talk about ${target.page1?.subTopic || target.topic}</p>
                 </div>
+                <!-- 💡 발행일자를 English Community 위쪽으로 이동 -->
                 <div style="text-align: right;">
+                  <div style="font-size: 9.5px; color: #64748b; font-weight: 600; margin-bottom: 2px;">${target.weekInfo || ''}</div>
                   <div style="font-size: 13px; font-weight: 900; color: #0f172a;">English Community</div>
                   <div style="font-size: 8.5px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
                 </div>
@@ -299,7 +299,9 @@
                   <div style="font-size: 9.5px; color: #0284c7; font-weight: 700; text-transform: uppercase;">English Community Essay Topic</div>
                   <h2 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 1px 0 0 0;">${target.page2?.topic || target.topic}</h2>
                 </div>
+                <!-- 💡 발행일자를 English Community 위쪽으로 이동 -->
                 <div style="text-align: right;">
+                  <div style="font-size: 9.5px; color: #64748b; font-weight: 600; margin-bottom: 2px;">${target.weekInfo || ''}</div>
                   <div style="font-size: 13px; font-weight: 900; color: #0f172a;">English Community</div>
                   <div style="font-size: 8.5px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
                 </div>
