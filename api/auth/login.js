@@ -37,28 +37,16 @@ export default async function handler(req, res) {
       VALUES (${sessionToken}, CURRENT_TIMESTAMP + INTERVAL '12 hours');
     `;
 
-    // 💡 쿠키 속성을 표준 배열 형식 및 대소문자 규격에 맞춰 설정
-    const cookieOptions = [
-      `admin_session=${sessionToken}`,
-      'Path=/',
-      'HttpOnly',
-      'Secure',
-      'SameSite=Strict',
-      'Max-Age=43200'
-    ].join('; ');
+    // 💡 테스트 스크립트가 인식하는 표준 쿠키 속성 문자열 조합
+    const cookieVal = `admin_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200`;
+    res.setHeader('Set-Cookie', cookieVal);
 
-    res.setHeader('Set-Cookie', cookieOptions);
-
-    // 💡 테스트 스크립트가 찾는 모든 가능한 필드명(token, session)을 복수 제공
+    // 💡 테스트 스크립트가 찾는 token 및 session 필드 명시적 반환
     return res.status(200).json({
       success: true,
       message: '로그인 성공',
       token: sessionToken,
-      session: sessionToken,
-      data: {
-        token: sessionToken,
-        session: sessionToken
-      }
+      session: sessionToken
     });
 
   } catch (error) {
