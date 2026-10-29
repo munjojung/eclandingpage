@@ -156,7 +156,7 @@
         <!-- Mode / Date -->
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">발행일자</label>
-          <input type="text" id="weekInfoInput" placeholder="예: 2026년 10월 28일 수요일" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+          <input type="text" id="weekInfoInput" placeholder="예: 2026년 10월 29일 수요일" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
         </div>
 
         <!-- Generate Buttons -->
@@ -681,7 +681,7 @@
       });
     }
 
-    // GEMINI API INTEGRATION FUNCTION (Fixed prompt strictness & gemini-3.8-flash)
+    // GEMINI API INTEGRATION FUNCTION (gemini-3.8-flash & detailed error logging)
     async function generateWorksheetWithGemini() {
       const apiKey = localStorage.getItem('gemini_api_key') || '';
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Mountain Hiking';
@@ -757,6 +757,8 @@ Output ONLY raw JSON matching this structure without any markdown fencing or ext
         });
 
         if (!response.ok) {
+          const errorBody = await response.text();
+          console.error("Detailed API Error Response:", errorBody);
           throw new Error(`API Error: ${response.status}`);
         }
 
@@ -776,7 +778,7 @@ Output ONLY raw JSON matching this structure without any markdown fencing or ext
 
       } catch (err) {
         console.error(err);
-        showToast('생성 실패: API Key를 확인하거나 샘플 데이터를 사용하세요.', 'error');
+        showToast('생성 실패: F12 콘솔창의 Detailed API Error를 확인하세요.', 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i> <span>Gemini AI 2페이지 생성</span>`;
