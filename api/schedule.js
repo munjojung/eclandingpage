@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    // 1. 테이블 생성 시 UNIQUE 제약 조건 추가 (phone과 target_date 조합)
+    // 1. 테이블 생성 시 (phone, target_date) 조합에 UNIQUE 제약 조건 추가
     await sql`
       CREATE TABLE IF NOT EXISTS esl_schedules (
         id SERIAL PRIMARY KEY,
@@ -22,11 +22,11 @@ export default async function handler(req, res) {
         target_date DATE NOT NULL,
         time_slot VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT unique_member_date UNIQUE (phone, target_date)
+        CONSTRAINT unique_phone_date UNIQUE (phone, target_date)
       );
     `;
 
-    // 2. 이미 해당 날짜에 신청한 내역이 있으면 업데이트(UPSERT), 없으면 삽입
+    // 2. UPSERT 처리: 동일한 phone과 target_date가 이미 존재하면 UPDATE, 없으면 INSERT
     await sql`
       INSERT INTO esl_schedules (name, phone, target_date, time_slot)
       VALUES (${name.trim()}, ${phone.trim()}, ${target_date}, ${time_slot})
