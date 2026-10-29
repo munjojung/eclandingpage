@@ -76,6 +76,7 @@
     <div class="tab-menu">
         <button class="tab-btn active" id="tabInquiries" onclick="switchTab('inquiries')">📋 전체 문의 관리</button>
         <button class="tab-btn" id="tabMeetups" onclick="switchTab('meetups')">👥 밋업 그룹 관리 (누적/조회)</button>
+        <button class="tab-btn" id="tabSchedules" onclick="switchTab('schedules')">📅 밋업 일정 관리 (신청현황)</button>
     </div>
 
     <!-- 1. 문의 관리 섹션 -->
@@ -130,6 +131,35 @@
             </table>
         </div>
     </div>
+
+    <!-- 3. 밋업 일정 관리 섹션 -->
+    <div id="viewSchedules" class="section-view">
+        <div class="filter-box">
+            <label for="filterScheduleDate">📅 날짜별 조회:</label>
+            <input type="date" id="filterScheduleDate" onchange="fetchSchedules()">
+            <button class="btn btn-refresh" onclick="document.getElementById('filterScheduleDate').value=''; fetchSchedules();">전체 날짜 보기</button>
+        </div>
+
+        <div class="stats-info" id="statsSchedules">총 일정 등록 건수: 0건</div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th style="width: 120px;">이름</th>
+                        <th style="width: 140px;">전화번호</th>
+                        <th style="width: 130px;">참여 희망일자</th>
+                        <th>참여 희망 시간대</th>
+                        <th style="width: 150px;">신청일시</th>
+                        <th style="width: 120px;">관리</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBodySchedules">
+                    <tr><td colspan="7" style="text-align:center; padding: 30px;">데이터를 불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -137,6 +167,7 @@
     let currentTab = 'inquiries';
     let rawInquiriesData = [];
     let rawMeetupsData = [];
+    let rawSchedulesData = [];
 
     function authenticate() {
         const pwd = document.getElementById('adminPasswordInput').value.trim();
@@ -156,14 +187,18 @@
         currentTab = tab;
         document.getElementById('tabInquiries').classList.toggle('active', tab === 'inquiries');
         document.getElementById('tabMeetups').classList.toggle('active', tab === 'meetups');
+        document.getElementById('tabSchedules').classList.toggle('active', tab === 'schedules');
+        
         document.getElementById('viewInquiries').classList.toggle('active', tab === 'inquiries');
         document.getElementById('viewMeetups').classList.toggle('active', tab === 'meetups');
+        document.getElementById('viewSchedules').classList.toggle('active', tab === 'schedules');
         loadCurrentView();
     }
 
     function loadCurrentView() {
         if (currentTab === 'inquiries') fetchInquiries();
-        else fetchMeetups();
+        else if (currentTab === 'meetups') fetchMeetups();
+        else if (currentTab === 'schedules') fetchSchedules();
     }
 
     async function fetchInquiries() {
@@ -225,7 +260,6 @@
                 rawMeetupsData = result.data;
                 renderMeetups(rawMeetupsData);
 
-                // 70일 이상 경과 데이터 자동 감지 및 CSV 자동 백업 안내
                 if (result.archived_candidates && result.archived_candidates.length > 0) {
                     autoArchiveOldMeetups(result.archived_candidates);
                 }
@@ -235,6 +269,97 @@
             }
         } catch (err) {
             alert('서버 통신 오류');
+        }
+    }
+
+    async function fetchSchedules() {
+        const filterDate = document.getElementById('filterScheduleDate').value;
+        let url = '/api/admin?type=schedules';
+        if (filterDate) url += `&date=${filterDate}`;
+
+        try {
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${adminToken}` }
+            });
+            const result = await res.json();
+            if (res.ok && result.success) {
+                rawSchedulesData = result.data;
+                renderSchedules(rawSchedulesData);
+            } else {
+                alert(result.error || '인증 실패');
+                document.getElementById('authOverlay').style.display = 'flex';
+            }
+        } catch (err) {
+            alert('서버 통신 오류');
+        }
+    }
+
+    function renderSchedules(data) {
+        const tbody = document.getElementById('tableBodySchedules');
+        tbody.innerHTML = '';
+        document.getElementById('statsSchedules').innerText = `총 일정 등록 건수: ${data.length}건`;
+
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">조회된 밋업 일정이 없습니다.</td></tr>';
+            return;
+        }
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            const dateStr = new Date(row.created_at).toLocaleString('ko-KR');
+            tr.innerHTML = `
+                <td><b>${row.id}</b></td>
+                <td><input type="text" value="${row.name || ''}" id="sch-name-${row.id}"></td>
+                <td><input type="text" value="${row.phone || ''}" id="sch-phone-${row.id}"></td>
+                <td><input type="date" value="${row.target_date || ''}" id="sch-date-${row.id}"></td>
+                <td><input type="text" value="${row.time_slot || ''}" id="sch-time-${row.id}"></td>
+                <td><small>${dateStr}</small></td>
+                <td>
+                    <button class="btn btn-edit" onclick="updateSchedule(${row.id})">저장</button>
+                    <button class="btn btn-del" onclick="deleteSchedule(${row.id})">삭제</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function updateSchedule(id) {
+        const payload = {
+            target: 'schedule',
+            id,
+            name: document.getElementById(`sch-name-${id}`).value,
+            phone: document.getElementById(`sch-phone-${id}`).value,
+            target_date: document.getElementById(`sch-date-${id}`).value,
+            time_slot: document.getElementById(`sch-time-${id}`).value
+        };
+
+        const res = await fetch('/api/admin', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+            alert('일정이 수정되었습니다.');
+            fetchSchedules();
+        } else {
+            alert('수정 실패');
+        }
+    }
+
+    async function deleteSchedule(id) {
+        if (!confirm('정말 이 일정을 삭제하시겠습니까?')) return;
+        const res = await fetch('/api/admin', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            body: JSON.stringify({ target: 'schedule', id })
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+            alert('일정이 삭제되었습니다.');
+            fetchSchedules();
+        } else {
+            alert('삭제 실패');
         }
     }
 
@@ -254,7 +379,6 @@
         link.click();
         document.body.removeChild(link);
 
-        // DB에서 70일 넘은 데이터 삭제 정리
         fetch('/api/admin', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
@@ -361,7 +485,7 @@
                 ];
                 csvContent += row.join(",") + "\n";
             });
-        } else {
+        } else if (currentTab === 'meetups') {
             if (!rawMeetupsData || rawMeetupsData.length === 0) return alert('다운로드할 밋업 그룹 데이터가 없습니다.');
             filename = `esl_meetups_${new Date().toISOString().slice(0,10)}.csv`;
             const headers = ["ID", "그룹번호", "날짜", "퍼실리테이터", "팀원명단"];
@@ -374,6 +498,23 @@
                     `"${r.date}"`,
                     `"${(r.facilitator || '').replace(/"/g, '""')}"`,
                     `"${(r.members || '').replace(/"/g, '""')}"`
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+        } else {
+            if (!rawSchedulesData || rawSchedulesData.length === 0) return alert('다운로드할 일정 데이터가 없습니다.');
+            filename = `esl_schedules_${new Date().toISOString().slice(0,10)}.csv`;
+            const headers = ["ID", "이름", "전화번호", "참여희망일자", "희망시간대", "신청일시"];
+            csvContent += headers.join(",") + "\n";
+
+            rawSchedulesData.forEach(r => {
+                const row = [
+                    r.id,
+                    `"${(r.name || '').replace(/"/g, '""')}"`,
+                    `"${(r.phone || '').replace(/"/g, '""')}"`,
+                    `"${r.target_date}"`,
+                    `"${(r.time_slot || '').replace(/"/g, '""')}"`,
+                    `"${new Date(r.created_at).toLocaleString('ko-KR')}"`
                 ];
                 csvContent += row.join(",") + "\n";
             });

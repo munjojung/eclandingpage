@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    // 테이블 자동 생성 보장
+    // 1. 테이블 생성 시 UNIQUE 제약 조건 추가 (phone과 target_date 조합)
     await sql`
       CREATE TABLE IF NOT EXISTS esl_schedules (
         id SERIAL PRIMARY KEY,
@@ -21,19 +21,25 @@ export default async function handler(req, res) {
         phone VARCHAR(50) NOT NULL,
         target_date DATE NOT NULL,
         time_slot VARCHAR(100) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_member_date UNIQUE (phone, target_date)
       );
     `;
 
-    // 일정 데이터 저장
+    // 2. 이미 해당 날짜에 신청한 내역이 있으면 업데이트(UPSERT), 없으면 삽입
     await sql`
       INSERT INTO esl_schedules (name, phone, target_date, time_slot)
-      VALUES (${name.trim()}, ${phone.trim()}, ${target_date}, ${time_slot});
+      VALUES (${name.trim()}, ${phone.trim()}, ${target_date}, ${time_slot})
+      ON CONFLICT (phone, target_date) 
+      DO UPDATE SET 
+        name = EXCLUDED.name,
+        time_slot = EXCLUDED.time_slot,
+        created_at = CURRENT_TIMESTAMP;
     `;
 
     return res.status(200).json({ 
       success: true, 
-      message: '참여 일정이 성공적으로 등록되었습니다! (매칭 시간: 당일 17:30)' 
+      message: '참여 일정이 성공적으로 등록(수정)되었습니다! (매칭 시간: 당일 17:30)' 
     });
 
   } catch (error) {
