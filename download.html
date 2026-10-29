@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English Community - 학습지 다운로드 자료실</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <!-- html2pdf.js 라이브러리 (브라우저에서 바로 PDF로 다운로드하기 위함) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Noto Sans KR', 'sans-serif'],
+            jakarta: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            navy: { 900: '#0f172a' },
+            skybrand: { 600: '#0284c7', 700: '#0369a1', 50: '#f0f9ff' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- HEADER -->
+  <header class="bg-navy-900 text-white shadow-md">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 bg-gradient-to-tr from-skybrand-600 to-cyan-400 rounded-xl flex items-center justify-center text-white font-bold font-jakarta shadow-sm">
+          EC
+        </div>
+        <div>
+          <h1 class="font-jakarta font-bold text-base tracking-wide">English Community</h1>
+          <p class="text-[11px] text-sky-200/70">Speak Freely, Connect Deeply. · 회원 전용 학습지 자료실</p>
+        </div>
+      </div>
+      <a href="generator.html" class="text-xs text-slate-400 hover:text-white transition flex items-center gap-1">
+        <i class="fa-solid fa-lock"></i> 관리자 페이지로 이동
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-8 space-y-6">
+    
+    <!-- Title Section -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <h2 class="text-xl font-bold font-jakarta text-navy-900 flex items-center gap-2">
+          <i class="fa-solid fa-folder-open text-skybrand-600"></i>
+          주간 회화 & 에세이 학습지 다운로드
+        </h2>
+        <p class="text-xs text-slate-500 mt-1">커뮤니티 세션 및 자율 학습을 위한 2페이지 구성의 공식 학습지 목록입니다.</p>
+      </div>
+      <div class="w-full md:w-64">
+        <input type="text" id="searchBox" onkeyup="filterWorksheets()" placeholder="주제어 검색..." class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+      </div>
+    </div>
+
+    <!-- Worksheet List Grid -->
+    <div id="worksheetGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Dynamically loaded items -->
+    </div>
+
+  </main>
+
+  <!-- HIDDEN PRINT/PDF RENDER CONTAINER -->
+  <div id="pdfExportContainer" class="hidden"></div>
+
+  <!-- TOAST -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs border border-slate-800">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toastMsg">알림 메시지</span>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+    let worksheets = [];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadWorksheets();
+    });
+
+    function loadWorksheets() {
+      // 관리자 페이지와 공유하는 로컬스토리지 키 활용 (없으면 샘플 제공)
+      const stored = localStorage.getItem('ec_worksheet_history');
+      if (stored) {
+        try {
+          worksheets = JSON.parse(stored);
+        } catch(e) { worksheets = []; }
+      }
+      renderList(worksheets);
+    }
+
+    function renderList(items) {
+      const grid = document.getElementById('worksheetGrid');
+      grid.innerHTML = '';
+
+      if (items.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-2 text-center py-12 bg-white rounded-2xl border border-slate-200">
+            <i class="fa-solid fa-file-circle-exclamation text-slate-300 text-3xl mb-2"></i>
+            <p class="text-xs text-slate-500">등록된 학습지가 없습니다. 관리자가 학습지를 생성하면 이곳에 표시됩니다.</p>
+          </div>
+        `;
+        return;
+      }
+
+      items.forEach(item => {
+        const dateStr = new Date(item.date || Date.now()).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+        
+        grid.innerHTML += `
+          <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition flex flex-col justify-between gap-4">
+            <div>
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>${item.weekInfo || dateStr}</span>
+                <span class="bg-skybrand-50 text-skybrand-700 px-2 py-0.5 rounded-full font-semibold">2페이지 완본</span>
+              </div>
+              <h3 class="font-bold font-jakarta text-navy-900 text-base mb-2">${item.topic}</h3>
+              <p class="text-xs text-slate-600 line-clamp-2">Daily Talk & Share (10문항) 및 Essay Topic & Key Expressions 포함</p>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-[11px] text-slate-400">English Community Academic Series</span>
+              <button onclick="downloadPDF('${item.id}')" class="px-3.5 py-2 bg-skybrand-600 hover:bg-skybrand-700 text-white text-xs font-medium rounded-xl shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span>PDF 다운로드</span>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function filterWorksheets() {
+      const keyword = document.getElementById('searchBox').value.toLowerCase();
+      const filtered = worksheets.filter(i => i.topic.toLowerCase().includes(keyword) || (i.weekInfo && i.weekInfo.toLowerCase().includes(keyword)));
+      renderList(filtered);
+    }
+
+    // PDF 다운로드 실행 함수 (관리자 페이지의 템플릿 구조를 활용해 숨겨진 영역에서 렌더링 후 PDF 변환)
+    function downloadPDF(id) {
+      const target = worksheets.find(i => i.id === id);
+      if (!target) return;
+
+      showToast('PDF 파일 생성 중... 잠시만 기다려주세요.', 'info');
+
+      // 임시로 PDF 추출용 HTML 생성
+      const exportContainer = document.getElementById('pdfExportContainer');
+      exportContainer.innerHTML = `
+        <div style="background: white; color: black; padding: 20mm; font-family: 'Noto Sans KR', sans-serif; width: 210mm; box-sizing: border-box;">
+          <!-- PAGE 1 -->
+          <div style="min-height: 250mm; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 11px; color: #64748b; font-weight: 600;">${target.weekInfo}</div>
+                  <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 4px 0;">Daily Talk & Share</h2>
+                  <p style="font-size: 12px; color: #0284c7; font-weight: 600;">Let's talk about ${target.page1.subTopic || target.topic}</p>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 16px; font-weight: 900; color: #0f172a;">English Community</div>
+                  <div style="font-size: 10px; color: #0284c7;">Speak Freely, Connect Deeply.</div>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
+                ${target.page1.questions.map(q => `
+                  <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+                    <div style="font-weight: bold; color: #0f172a; margin-bottom: 4px;">${q.q}</div>
+                    <div style="padding-left: 10px; color: #334155;">
+                      ${q.answers.map(a => `<div>• ${a.en} <br><span style="font-size:10px; color:#64748b;">(${a.kr})</span></div>`).join('')}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
+              <span>English Community Academic Series</span>
+              <span>Page 1 / 2</span>
+            </div>
+          </div>
+
+          <div style="page-break-before: always;"></div>
+
+          <!-- PAGE 2 -->
+          <div style="min-height: 250mm; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 11px; color: #0284c7; font-weight: 600;">English Community Essay Topic</div>
+                  <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 4px 0;">${target.page2.topic || target.topic}</h2>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 16px; font-weight: 900; color: #0f172a;">English Community</div>
+                  <div style="font-size: 10px; color: #0284c7;">Speak Freely, Connect Deeply.</div>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 15px; background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 11px; line-height: 1.6;">
+                <div style="font-weight: bold; color: #0f172a; margin-bottom: 6px;">📖 Essay Narrative Story</div>
+                <p>${target.page2.storyText}</p>
+              </div>
+
+              <div style="font-size: 11px;">
+                <div style="font-weight: bold; color: #0f172a; margin-bottom: 6px;">☑ Discussion & Expressions</div>
+                ${target.page2.questions.map(q => `
+                  <div style="padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
+                    <div style="font-weight: 600; color: #0f172a;">${q.q}</div>
+                    <div style="color: #64748b; font-size: 10px;">> #${q.expr}# : ${q.qKr}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
+              <span>English Community Essay & Discussion</span>
+              <span>Page 2 / 2</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const opt = {
+        margin:       0,
+        filename:     `EnglishCommunity_${target.topic.replace(/\s+/g, '_')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(exportContainer).save().then(() => {
+        exportContainer.innerHTML = '';
+        showToast('PDF 다운로드가 완료되었습니다!', 'success');
+      });
+    }
+
+    function showToast(msg, type = 'info') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
+    }
+  </script>
+</body>
+</html>

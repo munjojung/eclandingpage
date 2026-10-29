@@ -142,7 +142,7 @@
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">대화 및 에세이 주제</label>
           <div class="flex flex-col gap-2">
-            <input type="text" id="customTopicInput" placeholder="예: Mountain Hiking, Travel, Technology..." class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+            <input type="text" id="customTopicInput" placeholder="예: Travel & Cultures, AI..." class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
             <div class="flex flex-wrap gap-1.5 text-xs text-slate-600">
               <span class="text-slate-400 self-center">추천:</span>
               <button onclick="selectTopicPreset('Mountain Hiking & Trekking')" class="px-2 py-1 bg-slate-100 hover:bg-skybrand-50 rounded text-slate-700">#Hiking</button>
@@ -156,7 +156,7 @@
         <!-- Mode / Date -->
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">발행일자</label>
-          <input type="text" id="weekInfoInput" placeholder="예: 2026년 10월 28일 수요일" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+          <input type="text" id="weekInfoInput" placeholder="예: 2026년 10월 29일 수요일" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
         </div>
 
         <!-- Generate Buttons -->
@@ -250,7 +250,7 @@
             <!-- Header section -->
             <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
               <div>
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta" id="p1WeekText">40주차 · 수목일 토크</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta" id="p1WeekText">40주차 · 수목일 Talk</div>
                 <h2 class="text-2xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p1TitleText">Daily Talk & Share</h2>
                 <p class="text-xs font-semibold text-skybrand-600 font-jakarta">Let's talk about <span id="p1TopicText">Mountain Hiking & Trekking</span></p>
               </div>
@@ -262,7 +262,7 @@
 
             <!-- Questions Container -->
             <div id="dqQuestionsContainer" class="space-y-3.5 text-xs sm:text-sm">
-              <!-- Dynamically populated 10 Daily Talk & Share Questions -->
+              <!-- Dynamically populated 10 Daily Talk & Share questions -->
             </div>
           </div>
 
@@ -285,7 +285,6 @@
               <div>
                 <div class="text-xs font-semibold text-skybrand-600 uppercase tracking-widest font-jakarta">English Community Essay Topic</div>
                 <h2 class="text-2xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p2TopicText">Mountain Hiking & Trekking</h2>
-                <p class="text-[11px] text-slate-500 mt-0.5">English Community 앱 - Books - AI 문법교정을 통해 표현 예습 복습이 가능해요!</p>
               </div>
               <div class="text-right flex flex-col items-end">
                 <div class="text-xl font-black font-jakarta text-navy-900 tracking-wider">English Community</div>
@@ -394,7 +393,7 @@
       return `${year}년 ${month}월 ${day}일 ${dayName}`;
     }
 
-    // Pre-loaded English Community Sample Data
+    // Pre-loaded English Community Sample Data (Mountain Hiking)
     const SAMPLE_DATA = {
       id: "sample-hiking-01",
       date: new Date().toISOString(),
@@ -596,7 +595,7 @@
       document.getElementById('p1TitleText').innerText = data.page1.title || "Daily Talk & Share";
       document.getElementById('p1TopicText').innerText = data.page1.subTopic || data.topic;
 
-      // Render Page 1 Questions (10 items)
+      // Render Page 1 Questions
       const dqContainer = document.getElementById('dqQuestionsContainer');
       dqContainer.innerHTML = '';
       data.page1.questions.forEach((qObj) => {
@@ -663,7 +662,7 @@
         <p class="leading-relaxed font-serif text-slate-800">${highlightedStory}</p>
       `;
 
-      // Render Essay Questions (10 items)
+      // Render Essay Questions
       const essayQContainer = document.getElementById('essayQuestionsContainer');
       essayQContainer.innerHTML = '';
       data.page2.questions.forEach((qObj) => {
@@ -682,7 +681,7 @@
       });
     }
 
-    // GEMINI API INTEGRATION FUNCTION
+    // GEMINI API INTEGRATION FUNCTION (gemini-3.8-flash & detailed error logging)
     async function generateWorksheetWithGemini() {
       const apiKey = localStorage.getItem('gemini_api_key') || '';
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Mountain Hiking';
@@ -695,17 +694,20 @@
       try {
         const systemPrompt = `You are an expert English conversation curriculum writer for the "English Community" language center.
 The slogan of English Community is "Speak Freely, Connect Deeply.".
-Create a structured 2-page learning worksheet about the topic: "${customTopic}".
+
+CRITICAL REQUIREMENT:
+You must create a 2-page learning worksheet strictly and exclusively based on the user-provided topic: "${customTopic}".
+Do NOT use Mountain Hiking or any other default topic unless "${customTopic}" explicitly specifies Mountain Hiking. Every question, expression, vocabulary, story, and example must directly relate to "${customTopic}".
 
 Page 1 (Daily Talk & Share):
-- Exactly 10 numbered open-ended discussion questions related to "${customTopic}".
-- For each question, provide exactly 2 sample response choices in English with accurate Korean translations.
+- Exactly 10 numbered open-ended discussion questions about "${customTopic}".
+- For each question, provide 2 sample response choices in English with accurate Korean translations.
 
 Page 2 (Essay Topic):
-- 3 Today's Key Expressions (idioms, phrasal verbs, collocations) with Korean meaning and sample sentence.
+- 3 Today's Key Expressions related to "${customTopic}" (idioms, phrasal verbs, collocations) with Korean meaning and sample sentence.
 - 3 Review Expressions with Korean meaning and sample sentence.
-- A 150-200 word narrative story using all 6 expressions wrapped inside hashtags like #expression#.
-- Exactly 10 discussion questions linked to the expressions (each question referencing one of the expressions in 'expr' field).
+- A 150-200 word narrative story about "${customTopic}" using all 6 expressions wrapped inside hashtags like #expression#.
+- 10 discussion questions linked to each expression.
 
 OUTPUT FORMAT REQUIREMENTS:
 Output ONLY raw JSON matching this structure without any markdown fencing or extra text:
@@ -744,7 +746,7 @@ Output ONLY raw JSON matching this structure without any markdown fencing or ext
   }
 }`;
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -755,6 +757,8 @@ Output ONLY raw JSON matching this structure without any markdown fencing or ext
         });
 
         if (!response.ok) {
+          const errorBody = await response.text();
+          console.error("Detailed API Error Response:", errorBody);
           throw new Error(`API Error: ${response.status}`);
         }
 
@@ -770,11 +774,11 @@ Output ONLY raw JSON matching this structure without any markdown fencing or ext
 
         renderWorksheet(parsedJSON);
         saveToHistory(parsedJSON);
-        showToast(`'${customTopic}' 주제로 10문항 구성 Daily Talk & Share 학습지가 생성되었습니다!`, 'success');
+        showToast(`'${customTopic}' 주제로 2페이지 학습지가 자동 생성되었습니다!`, 'success');
 
       } catch (err) {
         console.error(err);
-        showToast('생성 실패: API Key를 확인하거나 샘플 데이터를 사용하세요.', 'error');
+        showToast('생성 실패: F12 콘솔창의 Detailed API Error를 확인하세요.', 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i> <span>Gemini AI 2페이지 생성</span>`;
