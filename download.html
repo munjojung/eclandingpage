@@ -123,7 +123,6 @@
         } catch(e) { worksheets = []; }
       }
       
-      // 만약 저장된 학습지가 없다면 기본 샘플 학습지 자동 생성 (데이터 누락 오류 방지)
       if (!worksheets || worksheets.length === 0) {
         worksheets = [
           {
@@ -212,7 +211,6 @@
       pendingDownloadId = null;
     }
 
-    // 💡 휴대폰 번호 회원 인증 및 통신
     async function verifyAndDownload() {
       const phoneInput = document.getElementById('modalPhoneInput').value.trim();
       const errorDiv = document.getElementById('authErrorMsg');
@@ -249,7 +247,6 @@
         console.warn('API check bypassed:', err);
       }
 
-      // 010 번호 형식이면 즉시 다운로드 허용 (안전장치)
       if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
         closeAuthModal();
         showToast('회원 인증 완료! PDF 창을 준비합니다.', 'success');
@@ -261,7 +258,7 @@
       errorDiv.style.display = 'block';
     }
 
-    // 💡 새 창을 통한 PDF 인쇄 및 저장 트리거 함수 (데이터 불일치 방어 로직 포함)
+    // 💡 인쇄 완료/취소 직후 about:blank 창이 자동으로 닫히도록 개선된 함수
     function executePDFDownload(id) {
       let target = worksheets.find(i => i.id === id);
       if (!target && worksheets.length > 0) {
@@ -413,7 +410,13 @@
 
           <script>
             window.onload = function() {
-              setTimeout(function() { window.print(); }, 400);
+              setTimeout(function() {
+                window.print();
+                // 인쇄 대화상자가 닫힌 후 about:blank 창 자동 닫기
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 400);
             };
           <\/script>
         </body>
