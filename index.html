@@ -3,176 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>English Community</title>
+    <title>English Community - 언어교환 및 밋업 신청</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-        }
-        body {
-            width: 100vw;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #ff9966 0%, #ff5e62 50%, #ffbb33 100%);
-            padding: 20px 0;
-        }
-        .card {
-            background-color: #ffffff;
-            width: 90%;
-            max-width: 440px;
-            padding: 40px 30px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-            text-align: center;
-            position: relative;
-        }
-        .lang-switch {
-            position: absolute;
-            top: 20px;
-            right: 25px;
-            background: #f0f0f0;
-            border: none;
-            border-radius: 15px;
-            padding: 5px 12px;
-            font-size: 12px;
-            font-weight: 700;
-            color: #555;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .lang-switch:hover {
-            background: #e0e0e0;
-        }
-        .title {
-            font-size: 28px;
-            font-weight: 800;
-            color: #ff5e62;
-            margin-bottom: 6px;
-            font-style: italic;
-        }
-        .subtitle {
-            font-size: 13px;
-            color: #555555;
-            margin-bottom: 25px;
-            font-weight: 600;
-        }
-        .form-group {
-            text-align: left;
-            margin-bottom: 16px;
-        }
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            color: #333333;
-            margin-bottom: 6px;
-            font-weight: 700;
-        }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 13px;
-            outline: none;
-            transition: border-color 0.2s;
-            background-color: #fff;
-        }
-        .form-group input:focus, .form-group select:focus {
-            border-color: #ff5e62;
-        }
-        .checkbox-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            font-size: 12px;
-            color: #444;
-            margin-top: 4px;
-        }
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        .checkbox-item input[type="checkbox"] {
-            width: auto;
-            accent-color: #ff5e62;
-        }
-        .privacy-box {
-            font-size: 11px;
-            color: #666;
-            background: #f9f9f9;
-            padding: 8px 10px;
-            border-radius: 6px;
-            margin-top: 5px;
-        }
-        .submit-btn {
-            width: 100%;
-            padding: 14px;
-            margin-top: 10px;
-            background: linear-gradient(90deg, #ff7e5f 0%, #feb47b 100%);
-            border: none;
-            border-radius: 25px;
-            color: white;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 126, 95, 0.4);
-            transition: transform 0.1s ease, box-shadow 0.2s ease;
-        }
-        .submit-btn:hover {
-            opacity: 0.95;
-            box-shadow: 0 6px 20px rgba(255, 126, 95, 0.5);
-        }
-        .submit-btn:active {
-            transform: scale(0.98);
-        }
-        .check-link-box {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .check-link-box a {
-            font-size: 13px;
-            color: #0284c7;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .check-link-box a.schedule-link {
-            color: #ff5e62;
-        }
-        .check-link-box a:hover {
-            text-decoration: underline;
-        }
+        * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, sans-serif; }
+        body { background: #f8fafc; margin: 0; padding: 40px 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #1e293b; }
+        .card { background: white; width: 100%; max-width: 520px; padding: 35px; border-radius: 20px; box-shadow: 0 4px 25px rgba(0,0,0,0.06); position: relative; }
+        .lang-btn { position: absolute; top: 25px; right: 25px; background: #e2e8f0; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; color: #475569; }
+        .lang-btn:hover { background: #cbd5e1; }
+        h2 { color: #0f172a; margin-bottom: 5px; font-size: 24px; text-align: center; }
+        .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+        input[type="text"], select { width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; background: #fff; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
+        .checkbox-group { display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #334155; cursor: pointer; }
+        .privacy-box { background: #f1f5f9; padding: 12px; border-radius: 10px; font-size: 12px; color: #475569; }
+        .submit-btn { width: 100%; padding: 14px; background: #0284c7; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
+        .submit-btn:hover { background: #0369a1; }
+        .check-link-box { margin-top: 20px; text-align: center; display: flex; flex-direction: column; gap: 8px; }
+        .check-link-box a { font-size: 13px; color: #0284c7; text-decoration: none; font-weight: 600; }
+        .check-link-box a:hover { text-decoration: underline; }
+        .schedule-link { color: #059669 !important; }
+        .error-msg { color: #ef4444; font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+        .success-msg { color: #10b981; font-size: 14px; margin-top: 10px; text-align: center; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <button type="button" class="lang-switch" id="langBtn" onclick="toggleLanguage()">EN</button>
-
-    <div class="title">English Community</div>
-    <div class="subtitle" id="subText">- 영어 언어교환 문의하기 -</div>
+    <button class="lang-btn" onclick="toggleLanguage()" id="langBtn">EN</button>
     
-    <form id="contactForm">
+    <h2 id="mainTitle">English Community</h2>
+    <div class="subtitle" id="subtitle">- 영어 언어교환 문의하기 -</div>
+    
+    <form id="inquiryForm" onsubmit="submitForm(event)">
         <!-- 1. 이름 -->
         <div class="form-group">
             <label for="name" id="labelName">이름</label>
             <input type="text" id="name" placeholder="홍길동" required>
         </div>
 
-        <!-- 2. 전화번호 및 메신저 ID -->
+        <!-- 2. 전화번호 -->
         <div class="form-group">
-            <label for="phone_input" id="labelPhone">휴대폰번호 / 카카오톡 ID</label>
-            <input type="text" id="phone_input" placeholder="010-4560-2938 또는 Kakao ID" required>
+            <label for="phone_input" id="labelPhone">휴대폰번호</label>
+            <input type="text" id="phone_input" placeholder="010-1234-5678" required>
         </div>
 
         <!-- 3. 역할 및 구분 -->
@@ -237,9 +112,11 @@
         </div>
 
         <button type="submit" class="submit-btn" id="submitBtn">언어교환 문의하기 ✨</button>
+        <div id="errorMsg" class="error-msg"></div>
+        <div id="successMsg" class="success-msg"></div>
     </form>
 
-    <!-- 하단 링크 영역 (팀 조회 및 일정 등록) -->
+    <!-- 하단 링크 영역 -->
     <div class="check-link-box">
         <a href="check.html" target="_blank" id="checkLinkText">🔍 오늘 내 밋업 팀 확인하기 &rarr;</a>
         <a href="schedule.html" target="_blank" id="scheduleLinkText" class="schedule-link">📅 내일 모임 일정 등록하러 가기 &rarr;</a>
@@ -255,8 +132,8 @@
             subtitle: '- 영어 언어교환 문의하기 -',
             labelName: '이름',
             placeholderName: '홍길동',
-            labelPhone: '휴대폰번호 / 카카오톡 ID',
-            placeholderPhone: '010-4560-2938 또는 Kakao ID',
+            labelPhone: '휴대폰번호',
+            placeholderPhone: '010-1234-5678',
             labelRole: '구분 (역할)',
             optRole1: '한국인 참가자 (Korean Learner)',
             optRole2: 'Native English Speaker',
@@ -286,8 +163,8 @@
             subtitle: '- English Language Exchange Inquiry -',
             labelName: 'Name',
             placeholderName: 'John Doe',
-            labelPhone: 'Phone / KakaoTalk / Telegram ID',
-            placeholderPhone: '010-XXXX-XXXX or ID',
+            labelPhone: 'Phone Number',
+            placeholderPhone: '010-XXXX-XXXX',
             labelRole: 'Role / Primary Language',
             optRole1: 'Korean Learner (한국인)',
             optRole2: 'Native English Speaker',
@@ -303,14 +180,14 @@
             optLoc1: 'Yuseong-gu (Gungdong/Bongmyeong)',
             optLoc2: 'Seo-gu (Dunsan/Wolpyeong)',
             optLoc3: 'Open to any location / Online only',
-            labelRef: 'Referred By (Optional)',
-            placeholderRef: 'Name of the person who invited you',
-            txtPrivacy: '[Required] Your contact details will strictly be used for coordination & matching.',
-            submitBtn: 'Apply for Language Exchange ✨',
-            checkLink: '🔍 Check My Today’s Meetup Team →',
-            scheduleLink: '📅 Register Tomorrow’s Meetup Schedule →',
-            successMsg: 'Your inquiry has been successfully submitted!',
-            errorMsg: 'An error occurred. Please try again.'
+            labelRef: 'Referrer Name (Optional)',
+            placeholderRef: 'Referrer name',
+            txtPrivacy: '[Required] Information will be used solely for language exchange matching.',
+            submitBtn: 'Submit Inquiry ✨',
+            checkLink: '🔍 Check Today’s Meetup Team →',
+            scheduleLink: '📅 Register Schedule for Tomorrow →',
+            successMsg: 'Inquiry submitted successfully!',
+            errorMsg: 'An error occurred during submission. Please try again.'
         }
     };
 
@@ -319,95 +196,75 @@
         const t = translations[currentLang];
 
         document.getElementById('langBtn').innerText = t.langBtn;
-        document.getElementById('subText').innerText = t.subtitle;
+        document.getElementById('subtitle').innerText = t.subtitle;
         document.getElementById('labelName').innerText = t.labelName;
         document.getElementById('name').placeholder = t.placeholderName;
         document.getElementById('labelPhone').innerText = t.labelPhone;
         document.getElementById('phone_input').placeholder = t.placeholderPhone;
-        
         document.getElementById('labelRole').innerText = t.labelRole;
         document.getElementById('optRole1').innerText = t.optRole1;
         document.getElementById('optRole2').innerText = t.optRole2;
         document.getElementById('optRole3').innerText = t.optRole3;
-
         document.getElementById('labelLevel').innerText = t.labelLevel;
         document.getElementById('optLvl1').innerText = t.optLvl1;
         document.getElementById('optLvl2').innerText = t.optLvl2;
         document.getElementById('optLvl3').innerText = t.optLvl3;
-
         document.getElementById('labelTime').innerText = t.labelTime;
         document.getElementById('txtOffline').innerText = t.txtOffline;
         document.getElementById('txtOnline').innerText = t.txtOnline;
-
         document.getElementById('labelLoc').innerText = t.labelLoc;
         document.getElementById('optLoc1').innerText = t.optLoc1;
         document.getElementById('optLoc2').innerText = t.optLoc2;
         document.getElementById('optLoc3').innerText = t.optLoc3;
-
         document.getElementById('labelRef').innerText = t.labelRef;
         document.getElementById('referrer').placeholder = t.placeholderRef;
         document.getElementById('txtPrivacy').innerText = t.txtPrivacy;
-
         document.getElementById('submitBtn').innerText = t.submitBtn;
         document.getElementById('checkLinkText').innerText = t.checkLink;
         document.getElementById('scheduleLinkText').innerText = t.scheduleLink;
     }
 
-    document.getElementById('contactForm').addEventListener('submit', async function(e) {
+    async function submitForm(e) {
         e.preventDefault();
+        const errorDiv = document.getElementById('errorMsg');
+        const successDiv = document.getElementById('successMsg');
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
 
-        const nameVal = document.getElementById('name').value.trim();
-        const phoneVal = document.getElementById('phone_input').value.trim();
-        const roleVal = document.getElementById('role').value;
-        const levelVal = document.getElementById('level').value;
+        const name = document.getElementById('name').value.trim();
+        const phone = document.getElementById('phone_input').value.trim();
+        const role = document.getElementById('role').value;
+        const level = document.getElementById('level').value;
         
         let times = [];
         if (document.getElementById('timeOffline').checked) times.push(document.getElementById('timeOffline').value);
         if (document.getElementById('timeOnline').checked) times.push(document.getElementById('timeOnline').value);
-        const timeVal = times.join(', ') || 'No Time Selected';
+        const preferred_time = times.join(', ');
 
-        const locVal = document.getElementById('location').value;
-        const refVal = document.getElementById('referrer').value.trim() || 'Direct';
-
-        const formData = {
-            name: nameVal,
-            phone: phoneVal,
-            role: roleVal,
-            level: levelVal,
-            preferred_time: timeVal,
-            location: locVal,
-            referrer: refVal,
-            funnel_path: '웹폼'
-        };
-
-        const t = translations[currentLang];
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
+        const location = document.getElementById('location').value;
+        const referrer = document.getElementById('referrer').value.trim();
 
         try {
-            const response = await fetch('/api/submit', {
+            const res = await fetch('/api/submit', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, phone, role, level, preferred_time, location, referrer })
             });
 
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                alert(t.successMsg);
-                document.getElementById('contactForm').reset();
+            const result = await res.json();
+            if (res.ok && result.success) {
+                successDiv.innerText = translations[currentLang].successMsg;
+                successDiv.style.display = 'block';
+                document.getElementById('inquiryForm').reset();
             } else {
-                alert(`${t.errorMsg} (${result.error || 'Unknown'})`);
+                errorDiv.innerText = result.error || translations[currentLang].errorMsg;
+                errorDiv.style.display = 'block';
             }
         } catch (err) {
-            console.error('Network Error:', err);
-            alert(t.errorMsg);
-        } finally {
-            submitBtn.disabled = false;
+            errorDiv.innerText = translations[currentLang].errorMsg;
+            errorDiv.style.display = 'block';
         }
-    });
+    }
 </script>
 
 </body>
