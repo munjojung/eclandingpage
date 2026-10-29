@@ -7,15 +7,26 @@ export default async function handler(req, res) {
   }
 
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  let token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
-  try {
-    if (process.env.DATABASE_URL && token) {
+  if (!token && req.headers.cookie) {
+    const cookies = req.headers.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, val] = cookie.trim().split('=');
+      if (name === 'admin_session') {
+        token = val;
+        break;
+      }
+    }
+  }
+
+  if (token) {
+    try {
       const sql = neon(process.env.DATABASE_URL);
       await sql`DELETE FROM esl_sessions WHERE token = ${token};`;
+    } catch (error) {
+      console.error('Logout DB Error:', error);
     }
-  } catch (e) {
-    console.error('Logout db cleanup error:', e);
   }
 
   // 쿠키 만료 처리
