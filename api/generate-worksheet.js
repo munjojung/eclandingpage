@@ -86,7 +86,7 @@ Create 10 page1 questions, 5 today's expressions, 5 review expressions, and 10 p
 `;
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
