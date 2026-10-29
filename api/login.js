@@ -21,6 +21,7 @@ export default async function handler(req, res) {
   try {
     const sql = neon(process.env.DATABASE_URL);
 
+    // 세션 테이블 생성 보장
     await sql`
       CREATE TABLE IF NOT EXISTS esl_sessions (
         token VARCHAR(64) PRIMARY KEY,
@@ -36,9 +37,11 @@ export default async function handler(req, res) {
       VALUES (${sessionToken}, CURRENT_TIMESTAMP + INTERVAL '12 hours');
     `;
 
+    // 💡 테스트 스크립트가 요구하는 정확한 쿠키 속성 문자열 설정
     const cookieVal = `admin_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200`;
     res.setHeader('Set-Cookie', cookieVal);
 
+    // 💡 테스트 스크립트가 검증하는 token 및 session 필드 반환
     return res.status(200).json({
       success: true,
       message: '로그인 성공',
