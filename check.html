@@ -19,7 +19,7 @@
         #resultArea { margin-top: 25px; text-align: left; display: none; background: #f1f5f9; padding: 20px; border-radius: 10px; border-left: 5px solid #ff5e62; }
         .result-title { font-size: 16px; font-weight: bold; color: #0f172a; margin-bottom: 10px; }
         .result-item { font-size: 14px; margin-bottom: 6px; color: #334155; }
-        .error-msg { color: #ef4444; font-size: 14px; margin-top: 15px; font-weight: 500; display: none; }
+        .error-msg { color: #ef4444; font-size: 14px; margin-top: 15px; font-weight: 500; display: none; background: #fee2e2; padding: 10px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -29,7 +29,7 @@
     <p>신청하실 때 등록하셨던 휴대폰 번호를 입력해 주세요.</p>
     
     <div class="input-group">
-        <input type="text" id="phoneInput" placeholder="예: 010-1234-5678" onkeydown="if(event.key==='Enter') checkGroup()">
+        <input type="text" id="phoneInput" placeholder="예: 010-3450-2090" onkeydown="if(event.key==='Enter') checkGroup()">
         <button onclick="checkGroup()">조회하기</button>
     </div>
 
@@ -46,7 +46,8 @@
 
 <script>
     async function checkGroup() {
-        const phone = document.getElementById('phoneInput').value.trim();
+        const phoneInput = document.getElementById('phoneInput');
+        const phone = phoneInput.value.trim();
         const errorDiv = document.getElementById('errorMsg');
         const resultArea = document.getElementById('resultArea');
 
@@ -65,7 +66,15 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone })
             });
-            const result = await res.json();
+
+            let result;
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                result = await res.json();
+            } else {
+                const text = await res.text();
+                throw new Error(`서버 응답 오류 (${res.status}): ${text.substring(0, 100)}`);
+            }
 
             if (res.ok && result.success) {
                 document.getElementById('resGroupName').innerText = `🎉 Group #${result.data.group_no} 배정 완료!`;
@@ -78,7 +87,8 @@
                 errorDiv.style.display = 'block';
             }
         } catch (err) {
-            errorDiv.innerText = '서버 통신 중 오류가 발생했습니다.';
+            console.error('Check Group Error:', err);
+            errorDiv.innerText = '서버 통신 중 오류가 발생했습니다: ' + err.message;
             errorDiv.style.display = 'block';
         }
     }
