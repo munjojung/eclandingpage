@@ -100,9 +100,6 @@
     </div>
   </div>
 
-  <!-- HIDDEN PRINT IFRAME -->
-  <iframe id="printFrame" style="position: absolute; width: 0; height: 0; border: 0; visibility: hidden;"></iframe>
-
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs border border-slate-800">
     <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
@@ -189,7 +186,7 @@
       pendingDownloadId = null;
     }
 
-    // 전화번호 인증 및 다운로드 실행 (API 연동 + 로컬 안전 Fallback 결합)
+    // 전화번호 인증 로직
     async function verifyAndDownload() {
       const phoneInput = document.getElementById('modalPhoneInput').value.trim();
       const errorDiv = document.getElementById('authErrorMsg');
@@ -208,7 +205,7 @@
         return;
       }
 
-      // 1순위: 백엔드 API 서버 인증 시도
+      // API 연동 확인 및 정적 배포(Vercel) Fallback 지원
       try {
         const res = await fetch('/api/check', {
           method: 'POST',
@@ -220,19 +217,18 @@
           const result = await res.json();
           if (result.success || result.exists || result.valid) {
             closeAuthModal();
-            showToast('회원 인증이 완료되었습니다. PDF를 생성합니다.', 'success');
+            showToast('회원 인증이 완료되었습니다. PDF 창을 준비합니다.', 'success');
             executePDFDownload(pendingDownloadId);
             return;
           }
         }
       } catch (err) {
-        // 서버 통신 오류 시 Fallback으로 진행
+        // API 오류 시 정적 통과
       }
 
-      // 2순위: Vercel 환경에서 안전한 번호 인증 통과 허용 (010 번호 및 등록 번호)
       if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
         closeAuthModal();
-        showToast('회원 인증 완료! PDF 다운로드를 시작합니다.', 'success');
+        showToast('회원 인증 완료! PDF 창을 준비합니다.', 'success');
         executePDFDownload(pendingDownloadId);
         return;
       }
@@ -241,7 +237,7 @@
       errorDiv.style.display = 'block';
     }
 
-    // PDF 생성 및 인쇄 트리거 (여백 최적화 피팅 적용)
+    // PDF 생성 및 인쇄/다운로드 창 출력 (보안/크로스 브라우저 호환 방식)
     function executePDFDownload(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
@@ -255,11 +251,7 @@
       const timeStr = `${yyyy}${mm}${dd}_${hh}${min}`;
       
       const dynamicTitle = `English Community - 학습지 - ${timeStr}`;
-      document.title = dynamicTitle;
 
-      const iframe = document.getElementById('printFrame');
-      const iframeDoc = iframe.contentWindow.document;
-      
       const htmlContent = `
         <!DOCTYPE html>
         <html lang="ko">
@@ -304,15 +296,15 @@
             }
             .header { 
               border-bottom: 2px solid #0f172a; 
-              padding-bottom: 6mm; 
-              margin-bottom: 10mm; 
+              padding-bottom: 6px; 
+              margin-bottom: 10px; 
               display: flex; 
               justify-content: space-between; 
               align-items: flex-start; 
             }
             .footer { 
               border-top: 1px solid #e2e8f0; 
-              padding-top: 6mm; 
+              padding-top: 6px; 
               display: flex; 
               justify-content: space-between; 
               font-size: 9.5px; 
@@ -437,22 +429,26 @@
             </div>
           </div>
 
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 300);
+            };
+          <\/script>
         </body>
         </html>
       `;
 
-      iframeDoc.open();
-      iframeDoc.write(htmlContent);
-      iframeDoc.close();
-
-      setTimeout(() => {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        
-        setTimeout(() => {
-          document.title = "English Community - 학습지 다운로드 자료실";
-        }, 1000);
-      }, 400);
+      // 새 창을 열어 안정적으로 인쇄/PDF 저장 창 호출
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.open();
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+      } else {
+        showToast('팝업 블록이 설정되어 있습니다. 팝업 허용 후 다시 시도해 주세요.', 'error');
+      }
     }
 
     function showToast(msg, type = 'info') {
