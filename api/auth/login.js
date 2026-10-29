@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       VALUES (${sessionToken}, CURRENT_TIMESTAMP + INTERVAL '12 hours');
     `;
 
-    // 쿠키 설정 및 토큰 값 명시적 반환
+    // 💡 테스트 스크립트와 브라우저가 모두 만족하는 쿠키 설정 및 토큰 반환
     res.setHeader(
       'Set-Cookie',
       `admin_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200`
@@ -46,7 +46,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       message: '로그인 성공',
-      token: sessionToken // 👈 테스트 스크립트 및 프론트엔드 호환용 필드 추가
+      token: sessionToken,   // 테스트 스크립트 호환용
+      session: sessionToken  // 테스트 스크립트 호환용
     });
 
   } catch (error) {
