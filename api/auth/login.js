@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    // 세션 테이블 생성 (최초 1회 자동 생성)
+    // 세션 테이블 생성 보장
     await sql`
       CREATE TABLE IF NOT EXISTS esl_sessions (
         token VARCHAR(64) PRIMARY KEY,
@@ -30,16 +30,14 @@ export default async function handler(req, res) {
       );
     `;
 
-    // 무작위 세션 토큰 생성
     const sessionToken = crypto.randomBytes(32).toString('hex');
 
-    // DB에 세션 저장 (12시간 유효)
     await sql`
       INSERT INTO esl_sessions (token, expires_at)
       VALUES (${sessionToken}, CURRENT_TIMESTAMP + INTERVAL '12 hours');
     `;
 
-    // HttpOnly 쿠키로 세션 토큰 전달
+    // 쿠키 설정 및 토큰 값 명시적 반환
     res.setHeader(
       'Set-Cookie',
       `admin_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200`
@@ -47,8 +45,8 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: '관리자 로그인 성공',
-      token: sessionToken // 프론트엔드 헤더 fallback용
+      message: '로그인 성공',
+      token: sessionToken // 👈 테스트 스크립트 및 프론트엔드 호환용 필드 추가
     });
 
   } catch (error) {
