@@ -1,25 +1,33 @@
 import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req, res) {
+  // 💡 P0 보안 개선: 기본 비밀번호 제거 및 안전한 환경 변수 검증
+  const adminSecret = process.env.ADMIN_PASSWORD;
+
+  if (!adminSecret || adminSecret.length < 16) {
+    console.error('ADMIN_PASSWORD is missing or too short');
+    return res.status(503).json({
+      success: false,
+      error: '관리자 인증 설정이 올바르지 않습니다.'
+    });
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: '인증 헤더가 올바르지 않습니다.' });
+    return res.status(401).json({ success: false, error: '인증 헤더가 올바르지 않습니다.' });
   }
 
   const token = authHeader.split(' ')[1];
-  const adminSecret = process.env.ADMIN_PASSWORD || '1234';
-
   if (token !== adminSecret) {
-    return res.status(401).json({ error: '관리자 비밀번호가 일치하지 않습니다.' });
+    return res.status(401).json({ success: false, error: '관리자 비밀번호가 일치하지 않습니다.' });
   }
 
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    // GET 요청: 문의 내역, 밋업 그룹, 밋업 일정 조회 (날짜 필터 지원)
     if (req.method === 'GET') {
       const type = req.query.type;
-      const targetDate = req.query.date; // YYYY-MM-DD (선택)
+      const targetDate = req.query.date;
 
       if (type === 'meetups') {
         let meetups;
@@ -51,7 +59,6 @@ export default async function handler(req, res) {
           archived_candidates: oldMeetups 
         });
       } else if (type === 'schedules') {
-        // 💡 1. 밋업 일정(esl_schedules) 조회 로직 추가
         let schedules;
         if (targetDate) {
           schedules = await sql`
@@ -76,12 +83,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // PUT 요청: 수정 처리
     if (req.method === 'PUT') {
       const { target, id, name, phone, role, level, preferred_time, location, referrer, facilitator, members, target_date, time_slot } = req.body;
 
       if (target === 'schedule') {
-        // 💡 2. 밋업 일정 수정 로직 추가
         await sql`
           UPDATE esl_schedules 
           SET name = ${name}, phone = ${phone}, target_date = ${target_date}, time_slot = ${time_slot}
@@ -104,12 +109,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: '수정 완료' });
     }
 
-    // DELETE 요청: 삭제 처리
     if (req.method === 'DELETE') {
       const { id, target, archive_old } = req.body;
       
       if (target === 'schedule') {
-        // 💡 3. 밋업 일정 삭제 로직 추가
         await sql`DELETE FROM esl_schedules WHERE id = ${id};`;
         return res.status(200).json({ success: true, message: '일정 삭제 완료' });
       }
@@ -125,7 +128,7 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { items } = req.body;
       if (!Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ error: '유효하지 않은 데이터입니다.' });
+        return res.status(400).json({ success: false, error: '유효하지 않은 데이터입니다.' });
       }
       for (const item of items) {
         await sql`
@@ -138,6 +141,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Admin API Error:', error);
-    return res.status(500).json({ success: false, error: '서버 오류: ' + error.message });
+    return res.status(500).json({ success: false, error: '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' });
   }
 }
