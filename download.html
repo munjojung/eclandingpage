@@ -12,8 +12,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
-  <!-- html2pdf.js 라이브러리 (브라우저에서 바로 PDF로 다운로드하기 위함) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -76,9 +74,6 @@
 
   </main>
 
-  <!-- OFF-SCREEN RENDER CONTAINER FOR PDF EXPORT (html2canvas 백지 방지용) -->
-  <div id="pdfExportContainer" style="position: absolute; left: -9999px; top: 0; width: 210mm; background: white;"></div>
-
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs border border-slate-800">
     <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
@@ -94,7 +89,6 @@
     });
 
     function loadWorksheets() {
-      // 관리자 페이지(generator.html)와 공유하는 로컬스토리지 저장소 키
       const stored = localStorage.getItem('ec_worksheet_history');
       if (stored) {
         try {
@@ -152,25 +146,43 @@
       renderList(filtered);
     }
 
-    // PDF 다운로드 실행 함수 (백지 방지 및 오프스크린 HTML 렌더링)
+    // 💡 브라우저 인쇄/PDF 저장 기능을 활용한 100% 확실한 다운로드 함수
     function downloadPDF(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
 
-      showToast('PDF 파일을 생성 중입니다... 잠시만 기다려주세요.', 'info');
+      showToast('인쇄/PDF 저장 창을 준비 중입니다...', 'info');
 
-      const exportContainer = document.getElementById('pdfExportContainer');
-      exportContainer.innerHTML = `
-        <div style="background: white; color: #0f172a; padding: 18mm 15mm; font-family: 'Noto Sans KR', sans-serif; width: 210mm; box-sizing: border-box;">
-          
-          <!-- PAGE 1: DAILY TALK & SHARE -->
-          <div style="min-height: 260mm; display: flex; flex-direction: column; justify-content: space-between;">
+      // 새 창을 열어 완벽한 인쇄용 문서 렌더링
+      const printWindow = window.open('', '_blank');
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="ko">
+        <head>
+          <meta charset="UTF-8">
+          <title>EnglishCommunity_${target.topic.replace(/\s+/g, '_')}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+          <style>
+            @page { size: A4; margin: 15mm; }
+            body { font-family: 'Noto Sans KR', sans-serif; color: #0f172a; margin: 0; background: white; -webkit-print-color-adjust: exact; }
+            .page { width: 100%; min-height: 265mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; box-sizing: border-box; }
+            .page:last-child { page-break-after: avoid; }
+            .header { border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .footer { margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; }
+            .checkbox { width: 13px; height: 13px; border: 1.5px solid #0284c7; display: inline-block; margin-right: 6px; border-radius: 2px; vertical-align: middle; }
+            .highlight { background-color: #e0f2fe; color: #0369a1; font-weight: 700; padding: 1px 4px; border-radius: 4px; border: 1px solid #bae6fd; }
+          </style>
+        </head>
+        <body>
+
+          <!-- PAGE 1 -->
+          <div class="page">
             <div>
-              <!-- Header -->
-              <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start;">
+              <div class="header">
                 <div>
-                  <div style="font-size: 11px; color: #64748b; font-weight: 600;">${target.weekInfo || 'Daily Worksheet'}</div>
-                  <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 2px 0 4px 0;">${target.page1?.title || 'Daily Talk & Share'}</h2>
+                  <div style="font-size: 11px; color: #64748b; font-weight: 600;">${target.weekInfo || ''}</div>
+                  <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 2px 0 4px 0;">Daily Talk & Share</h2>
                   <p style="font-size: 12px; color: #0284c7; font-weight: 700; margin: 0;">Let's talk about ${target.page1?.subTopic || target.topic}</p>
                 </div>
                 <div style="text-align: right;">
@@ -179,16 +191,18 @@
                 </div>
               </div>
 
-              <!-- Questions List -->
               <div style="display: flex; flex-direction: column; gap: 10px; font-size: 11px;">
                 ${(target.page1?.questions || []).map(q => `
                   <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
                     <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px;">${q.q}</div>
-                    <div style="padding-left: 8px; color: #334155; display: flex; flex-direction: column; gap: 3px;">
+                    <div style="padding-left: 8px; color: #334155; display: flex; flex-direction: column; gap: 4px;">
                       ${(q.answers || []).map(a => `
-                        <div style="line-height: 1.3;">
-                          <span style="color: #0284c7; font-weight: bold;">▪</span> ${a.en}
-                          <div style="font-size: 10px; color: #64748b; margin-left: 10px;">${a.kr}</div>
+                        <div style="display: flex; align-items: flex-start;">
+                          <span class="checkbox" style="margin-top: 2px;"></span>
+                          <div>
+                            <div>${a.en}</div>
+                            <div style="font-size: 10px; color: #64748b;">${a.kr}</div>
+                          </div>
                         </div>
                       `).join('')}
                     </div>
@@ -196,22 +210,16 @@
                 `).join('')}
               </div>
             </div>
-
-            <!-- Footer -->
-            <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
+            <div class="footer">
               <span style="font-weight: 700;">English Community Academic Series</span>
               <span>Page 1 / 2</span>
             </div>
           </div>
 
-          <!-- PAGE BREAK -->
-          <div style="page-break-before: always; break-before: page; height: 1px;"></div>
-
-          <!-- PAGE 2: ESSAY TOPIC -->
-          <div style="min-height: 260mm; display: flex; flex-direction: column; justify-content: space-between; padding-top: 5mm;">
+          <!-- PAGE 2 -->
+          <div class="page">
             <div>
-              <!-- Header -->
-              <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start;">
+              <div class="header">
                 <div>
                   <div style="font-size: 11px; color: #0284c7; font-weight: 700; text-transform: uppercase;">English Community Essay Topic</div>
                   <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 2px 0 0 0;">${target.page2?.topic || target.topic}</h2>
@@ -222,74 +230,60 @@
                 </div>
               </div>
 
-              <!-- Key Expressions Summary -->
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; font-size: 10px;">
                 <div style="background: #f0f9ff; padding: 8px 10px; border-radius: 6px; border: 1px solid #bae6fd;">
                   <div style="font-weight: 700; color: #0369a1; margin-bottom: 4px;">오늘의 주요 표현</div>
                   ${(target.page2?.todaysExpressions || []).map((ex, i) => `
-                    <div style="margin-bottom: 3px;">
-                      <strong>${i+1}. ${ex.en}</strong>: ${ex.kr}
-                    </div>
+                    <div style="margin-bottom: 3px;"><strong>${i+1}. #${ex.en}</strong>: ${ex.kr}</div>
                   `).join('')}
                 </div>
                 <div style="background: #f8fafc; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
                   <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">복습 주요 표현</div>
                   ${(target.page2?.reviewExpressions || []).map((ex, i) => `
-                    <div style="margin-bottom: 3px;">
-                      <strong>${i+1}. ${ex.en}</strong>: ${ex.kr}
-                    </div>
+                    <div style="margin-bottom: 3px;"><strong>${i+1}. #${ex.en}</strong>: ${ex.kr}</div>
                   `).join('')}
                 </div>
               </div>
 
-              <!-- Narrative Story -->
               <div style="margin-bottom: 14px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 11px; line-height: 1.6; color: #1e293b;">
                 <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">📖 Essay Narrative Story</div>
-                <p style="margin: 0; font-family: serif;">${(target.page2?.storyText || '').replace(/#([^#]+)#/g, '<span style="background-color:#e0f2fe; color:#0369a1; font-weight:bold; padding:0 3px; border-radius:3px;">$1</span>')}</p>
+                <p style="margin: 0; font-family: serif;">${(target.page2?.storyText || '').replace(/#([^#]+)#/g, '<span class="highlight">$1</span>')}</p>
               </div>
 
-              <!-- Discussion Questions -->
-              <div style="font-size: 10.5px;">
+              <div style="font-size: 10px;">
                 <div style="font-weight: 700; color: #0f172a; margin-bottom: 6px;">☑ Essay Discussion Questions</div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                   ${(target.page2?.questions || []).map(q => `
-                    <div style="padding: 3px 0; border-bottom: 1px solid #f1f5f9;">
-                      <div style="font-weight: 600; color: #0f172a;">${q.q}</div>
-                      <div style="color: #64748b; font-size: 9.5px; margin-top: 1px;">&gt; #${q.expr}# : ${q.qKr}</div>
+                    <div style="padding: 3px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                      <div>
+                        <div style="font-weight: 600; color: #0f172a;">${q.q}</div>
+                        <div style="color: #64748b; font-size: 9.5px; margin-top: 1px;">&gt; #${q.expr}# : ${q.qKr}</div>
+                      </div>
+                      <span class="checkbox"></span>
                     </div>
                   `).join('')}
                 </div>
               </div>
             </div>
 
-            <!-- Footer -->
-            <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
+            <div class="footer">
               <span style="font-weight: 700;">English Community Essay & Discussion</span>
               <span>Page 2 / 2</span>
             </div>
           </div>
 
-        </div>
+        </body>
+        </html>
       `;
 
-      const opt = {
-        margin:       0,
-        filename:     `EnglishCommunity_${target.topic.replace(/\s+/g, '_')}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
 
-      // 렌더링 타임랙 보장을 위한 300ms 지연 후 PDF 변환
+      // 폰트 로딩 대기 후 인쇄(PDF 저장) 창 호출
       setTimeout(() => {
-        html2pdf().set(opt).from(exportContainer).save().then(() => {
-          exportContainer.innerHTML = '';
-          showToast('PDF 다운로드가 성공적으로 완료되었습니다!', 'success');
-        }).catch(err => {
-          console.error(err);
-          showToast('PDF 변환 중 오류가 발생했습니다.', 'error');
-        });
-      }, 300);
+        printWindow.print();
+      }, 500);
     }
 
     function showToast(msg, type = 'info') {
