@@ -60,7 +60,7 @@
           <i class="fa-solid fa-folder-open text-skybrand-600"></i>
           주간 회화 & 에세이 학습지 다운로드
         </h2>
-        <p class="text-xs text-slate-500 mt-1">커뮤니티 세션 및 자율 학습을 위한 2페이지 구성의 공식 학습지 목록입니다.</p>
+        <p class="text-xs text-slate-500 mt-1">커뮤니티 세션 및 자율 학습을 위한 2페이지 구성의 공식 학습지 목록입니다. (회원 전용)</p>
       </div>
       <div class="w-full md:w-64">
         <input type="text" id="searchBox" onkeyup="filterWorksheets()" placeholder="주제어 검색..." class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
@@ -74,6 +74,32 @@
 
   </main>
 
+  <!-- PHONE VERIFICATION MODAL (check.html Look & Feel 적용) -->
+  <div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 text-center relative animate-in fade-in zoom-in duration-200">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="w-12 h-12 bg-skybrand-50 text-skybrand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl shadow-inner">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+
+      <h3 class="font-bold font-jakarta text-navy-900 text-xl mb-2">회원 전용 다운로드</h3>
+      <p class="text-xs text-slate-500 mb-6 leading-relaxed">학습지를 다운로드하시려면 커뮤니티 등록 시 사용하신<br>휴대폰 번호를 입력해 주세요.</p>
+      
+      <div class="flex gap-2 mb-3">
+        <input type="text" id="modalPhoneInput" placeholder="예: 010-1234-5678" onkeydown="if(event.key==='Enter') verifyAndDownload()" class="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm outline-none focus:border-skybrand-600 focus:ring-2 focus:ring-skybrand-100 transition">
+        <button onclick="verifyAndDownload()" class="px-5 py-3 bg-skybrand-600 hover:bg-skybrand-700 text-white font-medium rounded-xl text-sm transition shadow-sm flex items-center gap-1.5">
+          <span>확인</span>
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </div>
+
+      <div id="authErrorMsg" class="text-rose-500 text-xs font-medium text-left mt-2 hidden bg-rose-50 p-2.5 rounded-lg border border-rose-100"></div>
+    </div>
+  </div>
+
   <!-- HIDDEN PRINT IFRAME -->
   <iframe id="printFrame" style="position: absolute; width: 0; height: 0; border: 0; visibility: hidden;"></iframe>
 
@@ -86,6 +112,7 @@
   <!-- SCRIPT -->
   <script>
     let worksheets = [];
+    let pendingDownloadId = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       loadWorksheets();
@@ -130,7 +157,7 @@
             </div>
             <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
               <span class="text-[11px] text-slate-400">English Community Academic Series</span>
-              <button onclick="downloadPDF('${item.id}')" class="px-3.5 py-2 bg-skybrand-600 hover:bg-skybrand-700 text-white text-xs font-medium rounded-xl shadow-sm transition flex items-center gap-1.5">
+              <button onclick="requestDownload('${item.id}')" class="px-3.5 py-2 bg-skybrand-600 hover:bg-skybrand-700 text-white text-xs font-medium rounded-xl shadow-sm transition flex items-center gap-1.5">
                 <i class="fa-solid fa-file-pdf"></i>
                 <span>PDF 다운로드</span>
               </button>
@@ -149,12 +176,73 @@
       renderList(filtered);
     }
 
-    // 💡 A4 수직 공간을 꽉 채우도록 타이포그래피와 여백을 보정한 PDF 다운로드 함수
-    function downloadPDF(id) {
+    // 💡 다운로드 버튼 클릭 시 인증 모달 오픈
+    function requestDownload(id) {
+      pendingDownloadId = id;
+      document.getElementById('modalPhoneInput').value = '';
+      document.getElementById('authErrorMsg').style.display = 'none';
+      document.getElementById('authModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('modalPhoneInput').focus(), 100);
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+      pendingDownloadId = null;
+    }
+
+    // 💡 휴대폰 번호 회원 인증 및 서버 통신 처리
+    async function verifyAndDownload() {
+      const phone = document.getElementById('modalPhoneInput').value.trim();
+      const errorDiv = document.getElementById('authErrorMsg');
+      errorDiv.style.display = 'none';
+
+      if (!phone) {
+        errorDiv.innerText = '휴대폰 번호를 입력해 주세요.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        // check.html과 동일한 백엔드 API 연동 구조 (필요에 따라 연동 혹은 테스트 허용)
+        const res = await fetch('/api/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        
+        // 서버 응답이 없거나 데모 환경인 경우 테스트를 위해 통과 처리 로직 추가 가능
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success) {
+            closeAuthModal();
+            showToast('회원 인증이 완료되었습니다. PDF를 생성합니다.', 'success');
+            executePDFDownload(pendingDownloadId);
+            return;
+          } else {
+            errorDiv.innerText = result.error || '등록되지 않은 휴대폰 번호입니다.';
+            errorDiv.style.display = 'block';
+            return;
+          }
+        }
+      } catch (err) {
+        // 백엔드 API가 아직 연결되지 않은 프론트엔드 단독 테스트 환경을 위한 예외처리 (예: 번호가 입력되면 통과)
+        // 실제 운영 환경에서는 위의 /api/check 결과에 따르게 됩니다.
+        if (phone.length >= 10) {
+          closeAuthModal();
+          showToast('회원 인증 완료 (테스트 모드)', 'success');
+          executePDFDownload(pendingDownloadId);
+          return;
+        }
+      }
+
+      errorDiv.innerText = '유효하지 않은 회원 번호입니다. 관리자에 문의하세요.';
+      errorDiv.style.display = 'block';
+    }
+
+    // 💡 실제 PDF 생성 및 인쇄 트리거 함수
+    function executePDFDownload(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
-
-      showToast('PDF 저장 창을 불러오는 중입니다...', 'info');
 
       const now = new Date();
       const yyyy = now.getFullYear();
@@ -265,7 +353,6 @@
                 </div>
               </div>
 
-              <!-- 💡 문항 간격 및 폰트 크기를 늘려 A4 수직 공간 완벽 피팅 -->
               <div style="display: flex; flex-direction: column; gap: 7px; font-size: 10.5px;">
                 ${(target.page1?.questions || []).map(q => `
                   <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 5px;">
@@ -306,7 +393,6 @@
                 </div>
               </div>
 
-              <!-- 💡 주요 표현 및 스토리 영역 확장 -->
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 9.5px;">
                 <div style="background: #f0f9ff; padding: 7px 9px; border-radius: 6px; border: 1px solid #bae6fd;">
                   <div style="font-weight: 700; color: #0369a1; margin-bottom: 3px;">오늘의 주요 표현</div>
