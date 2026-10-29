@@ -27,9 +27,11 @@
         .btn-edit { background: #22c55e; color: white; padding: 6px 12px; font-size: 12px; }
         .btn-del { background: #ef4444; color: white; padding: 6px 12px; font-size: 12px; }
 
-        .filter-box { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .filter-box { background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .filter-box label { font-size: 13px; font-weight: bold; color: #475569; }
-        .filter-box input[type="date"] { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; }
+        .filter-box input[type="text"], .filter-box input[type="date"] { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; }
+        .filter-box input[type="text"]:focus, .filter-box input[type="date"]:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+        .search-input { min-width: 250px; }
 
         .table-wrapper { overflow-x: auto; margin-top: 15px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -81,6 +83,12 @@
 
     <!-- 1. 문의 관리 섹션 -->
     <div id="viewInquiries" class="section-view active">
+        <div class="filter-box">
+            <label for="searchInquiries">🔍 회원 검색 (이름 / 전화번호):</label>
+            <input type="text" id="searchInquiries" class="search-input" placeholder="이름 또는 전화번호 입력..." oninput="filterInquiries()">
+            <button class="btn btn-refresh" onclick="document.getElementById('searchInquiries').value=''; filterInquiries();">초기화</button>
+        </div>
+
         <div class="stats-info" id="statsInquiries">총 문의 건수: 0건</div>
         <div class="table-wrapper">
             <table>
@@ -110,7 +118,9 @@
         <div class="filter-box">
             <label for="filterDate">📅 날짜별 조회:</label>
             <input type="date" id="filterDate" onchange="fetchMeetups()">
-            <button class="btn btn-refresh" onclick="document.getElementById('filterDate').value=''; fetchMeetups();">전체 날짜 보기</button>
+            <label for="searchMeetups" style="margin-left: 10px;">🔍 팀원 검색:</label>
+            <input type="text" id="searchMeetups" class="search-input" placeholder="팀원 이름 또는 전화번호..." oninput="filterMeetups()">
+            <button class="btn btn-refresh" onclick="document.getElementById('filterDate').value=''; document.getElementById('searchMeetups').value=''; fetchMeetups();">초기화</button>
         </div>
 
         <div class="stats-info" id="statsMeetups">매칭된 그룹: 0개 팀</div>
@@ -137,7 +147,9 @@
         <div class="filter-box">
             <label for="filterScheduleDate">📅 날짜별 조회:</label>
             <input type="date" id="filterScheduleDate" onchange="fetchSchedules()">
-            <button class="btn btn-refresh" onclick="document.getElementById('filterScheduleDate').value=''; fetchSchedules();">전체 날짜 보기</button>
+            <label for="searchSchedules" style="margin-left: 10px;">🔍 회원 검색:</label>
+            <input type="text" id="searchSchedules" class="search-input" placeholder="이름 또는 전화번호 입력..." oninput="filterSchedules()">
+            <button class="btn btn-refresh" onclick="document.getElementById('filterScheduleDate').value=''; document.getElementById('searchSchedules').value=''; fetchSchedules();">초기화</button>
         </div>
 
         <div class="stats-info" id="statsSchedules">총 일정 등록 건수: 0건</div>
@@ -201,6 +213,7 @@
         else if (currentTab === 'schedules') fetchSchedules();
     }
 
+    // --- 1. 문의 관리 ---
     async function fetchInquiries() {
         try {
             const res = await fetch('/api/admin', {
@@ -209,7 +222,7 @@
             const result = await res.json();
             if (res.ok && result.success) {
                 rawInquiriesData = result.data;
-                renderInquiries(rawInquiriesData);
+                filterInquiries();
             } else {
                 alert(result.error || '인증 실패');
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -219,10 +232,28 @@
         }
     }
 
+    function filterInquiries() {
+        const q = document.getElementById('searchInquiries').value.trim().toLowerCase();
+        if (!q) {
+            renderInquiries(rawInquiriesData);
+            return;
+        }
+        const filtered = rawInquiriesData.filter(r => 
+            (r.name && r.name.toLowerCase().includes(q)) || 
+            (r.phone && r.phone.toLowerCase().includes(q))
+        );
+        renderInquiries(filtered);
+    }
+
     function renderInquiries(data) {
         const tbody = document.getElementById('tableBodyInquiries');
         tbody.innerHTML = '';
-        document.getElementById('statsInquiries').innerText = `총 문의 건수: ${data.length}건`;
+        document.getElementById('statsInquiries').innerText = `조회 결과: ${data.length}건 (전체 ${rawInquiriesData.length}건)`;
+
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px;">검색 결과가 없습니다.</td></tr>';
+            return;
+        }
 
         data.forEach(row => {
             const tr = document.createElement('tr');
@@ -246,6 +277,7 @@
         });
     }
 
+    // --- 2. 밋업 그룹 관리 ---
     async function fetchMeetups() {
         const filterDate = document.getElementById('filterDate').value;
         let url = '/api/admin?type=meetups';
@@ -258,7 +290,7 @@
             const result = await res.json();
             if (res.ok && result.success) {
                 rawMeetupsData = result.data;
-                renderMeetups(rawMeetupsData);
+                filterMeetups();
 
                 if (result.archived_candidates && result.archived_candidates.length > 0) {
                     autoArchiveOldMeetups(result.archived_candidates);
@@ -272,6 +304,45 @@
         }
     }
 
+    function filterMeetups() {
+        const q = document.getElementById('searchMeetups').value.trim().toLowerCase();
+        if (!q) {
+            renderMeetups(rawMeetupsData);
+            return;
+        }
+        const filtered = rawMeetupsData.filter(r => 
+            (r.facilitator && r.facilitator.toLowerCase().includes(q)) || 
+            (r.members && r.members.toLowerCase().includes(q))
+        );
+        renderMeetups(filtered);
+    }
+
+    function renderMeetups(data) {
+        const tbody = document.getElementById('tableBodyMeetups');
+        tbody.innerHTML = '';
+        document.getElementById('statsMeetups').innerText = `매칭된 그룹: ${data.length}개 팀 (전체 ${rawMeetupsData.length}개 팀)`;
+
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">조회된 밋업 그룹이 없습니다.</td></tr>';
+            return;
+        }
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>Group #${row.group_no}</b></td>
+                <td><b>${row.date}</b></td>
+                <td><input type="text" value="${row.facilitator || ''}" id="fac-${row.id}"></td>
+                <td><textarea id="mem-${row.id}">${row.members || ''}</textarea></td>
+                <td>
+                    <button class="btn btn-edit" onclick="updateMeetup(${row.id})">수정저장</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- 3. 밋업 일정 관리 ---
     async function fetchSchedules() {
         const filterDate = document.getElementById('filterScheduleDate').value;
         let url = '/api/admin?type=schedules';
@@ -284,7 +355,7 @@
             const result = await res.json();
             if (res.ok && result.success) {
                 rawSchedulesData = result.data;
-                renderSchedules(rawSchedulesData);
+                filterSchedules();
             } else {
                 alert(result.error || '인증 실패');
                 document.getElementById('authOverlay').style.display = 'flex';
@@ -294,10 +365,23 @@
         }
     }
 
+    function filterSchedules() {
+        const q = document.getElementById('searchSchedules').value.trim().toLowerCase();
+        if (!q) {
+            renderSchedules(rawSchedulesData);
+            return;
+        }
+        const filtered = rawSchedulesData.filter(r => 
+            (r.name && r.name.toLowerCase().includes(q)) || 
+            (r.phone && r.phone.toLowerCase().includes(q))
+        );
+        renderSchedules(filtered);
+    }
+
     function renderSchedules(data) {
         const tbody = document.getElementById('tableBodySchedules');
         tbody.innerHTML = '';
-        document.getElementById('statsSchedules').innerText = `총 일정 등록 건수: ${data.length}건`;
+        document.getElementById('statsSchedules').innerText = `조회 결과: ${data.length}건 (전체 ${rawSchedulesData.length}건)`;
 
         if (data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">조회된 밋업 일정이 없습니다.</td></tr>';
@@ -323,6 +407,7 @@
         });
     }
 
+    // --- CUD 액션 함수들 ---
     async function updateSchedule(id) {
         const payload = {
             target: 'schedule',
@@ -383,31 +468,6 @@
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
             body: JSON.stringify({ archive_old: true })
-        });
-    }
-
-    function renderMeetups(data) {
-        const tbody = document.getElementById('tableBodyMeetups');
-        tbody.innerHTML = '';
-        document.getElementById('statsMeetups').innerText = `매칭된 그룹: ${data.length}개 팀`;
-
-        if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">조회된 밋업 그룹이 없습니다.</td></tr>';
-            return;
-        }
-
-        data.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><b>Group #${row.group_no}</b></td>
-                <td><b>${row.date}</b></td>
-                <td><input type="text" value="${row.facilitator || ''}" id="fac-${row.id}"></td>
-                <td><textarea id="mem-${row.id}">${row.members || ''}</textarea></td>
-                <td>
-                    <button class="btn btn-edit" onclick="updateMeetup(${row.id})">수정저장</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
         });
     }
 
