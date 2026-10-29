@@ -73,6 +73,28 @@ def main():
         print(f"\n입력 오류: {e}")
         return 2
 
+    # Download page and input/origin guards can be checked without database access.
+    print("\n[Download] 다운로드 페이지 및 API 기본 보호 확인")
+    public_opener = urllib.request.build_opener()
+    page_status, _, page_body = request(public_opener, base + "/download.html", headers={"Accept": "text/html"})
+    record("/download.html 페이지는 200", page_status == 200, f"HTTP {page_status}" if page_status else page_body)
+
+    malformed_status, _, malformed_body = request(
+        public_opener, base + "/api/download", "POST",
+        {"Origin": origin, "Accept": "application/json"},
+        {"phone": "not-a-phone"}
+    )
+    record("잘못된 전화번호는 400", malformed_status == 400,
+           f"HTTP {malformed_status}" if malformed_status else malformed_body[:180])
+
+    bad_origin_status, _, bad_origin_body = request(
+        public_opener, base + "/api/download", "POST",
+        {"Origin": "https://invalid-origin-for-security-test.example", "Accept": "application/json"},
+        {"phone": "01012345678"}
+    )
+    record("잘못된 Origin의 다운로드 요청은 403", bad_origin_status == 403,
+           f"HTTP {bad_origin_status}" if bad_origin_status else bad_origin_body[:180])
+
     cookiejar = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookiejar))
     headers = {"Origin": origin, "Accept": "application/json"}

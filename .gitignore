@@ -1,8 +1,11 @@
 node_modules/
 html백업/
 .env
+.env.*
+!.env.example
 .DS_Store
 Thumbs.db
-.env.*
-__pycache__/
-*.pyc
+
+# Phase 1: PDF originals and local catalog must never be committed/deployed.
+/private_pdfs/*
+!/private_pdfs/README.txt

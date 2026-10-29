@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>English Community | 로컬 PDF 보관함</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#172033;background:#f3f6fb}*{box-sizing:border-box}body{margin:0;padding:24px}.wrap{max-width:1000px;margin:auto}.card{background:white;border:1px solid #e4e7ec;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 4px 18px #1018280a}h1{margin:0 0 8px}h2{margin:0 0 14px;font-size:19px}.muted{color:#667085;line-height:1.6}.warning{padding:12px 14px;background:#fff4d6;border-radius:10px;color:#854d0e;line-height:1.6}.row{display:flex;gap:12px;flex-wrap:wrap}.field{flex:1;min-width:220px}label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}input{width:100%;padding:11px;border:1px solid #d0d5dd;border-radius:9px;font:inherit}button,.button{border:0;border-radius:9px;padding:11px 15px;background:#175cd3;color:white;font-weight:700;cursor:pointer;font:inherit}button.secondary{background:#eaf0f8;color:#344054}button:disabled{opacity:.55;cursor:not-allowed}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.status{min-height:24px;margin-top:12px;font-size:14px}.error{color:#b42318}.success{color:#067647}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #eaecf0;font-size:14px}th{background:#f9fafb}.empty{text-align:center;color:#667085;padding:24px}.small{font-size:12px}.file-actions{display:flex;gap:8px;flex-wrap:wrap}
+</style></head>
+<body><div class="wrap">
+  <section class="card"><h1>로컬 PDF 보관함</h1><p class="muted">1단계 운영 도구입니다. PDF 원본과 목록은 관리자 PC의 <code>private_pdfs/</code> 폴더에만 저장합니다. 이 페이지는 회원에게 파일을 배포하지 않습니다.</p><div class="warning"><strong>중요:</strong> 폴더 이름만으로 비공개가 보장되는 것은 아닙니다. 이 도구는 선택한 로컬 폴더에만 파일을 기록합니다. 해당 폴더의 PDF는 GitHub에 커밋하거나 Vercel의 <code>public/</code>에 옮기지 마세요.</div>
+  <div class="actions"><button id="chooseFolder">① private_pdfs 폴더 선택</button><button id="refresh" class="secondary" disabled>목록 새로고침</button></div><div id="folderStatus" class="status" role="status" aria-live="polite">폴더를 선택해 주세요. Chrome 또는 Edge에서 localhost/HTTPS로 열어야 합니다.</div></section>
+  <section class="card"><h2>② PDF 등록</h2><p class="muted">generator.html에서 학습지를 작성한 뒤 <strong>인쇄 / PDF 저장</strong>을 선택하여 PDF로 저장하세요. 아래에서 저장한 PDF를 선택하면 지정한 <code>private_pdfs/</code> 폴더로 복사하고 목록을 갱신합니다.</p>
+    <form id="importForm"><div class="row"><div class="field"><label for="title">학습 자료 제목</label><input id="title" maxlength="180" required placeholder="Sun's Corner for Listening Practice"></div><div class="field"><label for="session">회차 / 범위</label><input id="session" maxlength="60" placeholder="170–179"></div></div><div class="row"><div class="field"><label for="pdfFile">PDF 파일</label><input id="pdfFile" type="file" accept="application/pdf,.pdf" required></div><div class="field"><label for="customFilename">저장 파일명 (선택)</label><input id="customFilename" maxlength="120" placeholder="listening-170-179.pdf"></div></div><div class="actions"><button id="importButton" type="submit" disabled>③ 로컬 폴더에 등록</button></div></form><div id="importStatus" class="status" role="status" aria-live="polite"></div></section>
+  <section class="card"><h2>③ 등록된 로컬 PDF</h2><p class="muted">이 목록은 선택한 PC 폴더의 manifest.json을 읽어 표시합니다. 웹사이트 회원에게 제공되는 목록이 아닙니다.</p><div class="table-wrap"><table><thead><tr><th>제목</th><th>회차</th><th>등록일</th><th>파일</th><th>작업</th></tr></thead><tbody id="pdfRows"><tr><td colspan="5" class="empty">폴더를 선택해 주세요.</td></tr></tbody></table></div></section>
+  <p class="muted small">브라우저 지원: 최신 Chrome/Edge. 폴더 접근 권한은 브라우저에서 명시적으로 허용해야 합니다. 이 페이지는 PDF를 서버로 업로드하지 않습니다.</p>
+</div>
+<script>
+(() => {
+  const chooseButton = document.getElementById('chooseFolder');
+  const refreshButton = document.getElementById('refresh');
+  const importButton = document.getElementById('importButton');
+  const folderStatus = document.getElementById('folderStatus');
+  const importStatus = document.getElementById('importStatus');
+  const rows = document.getElementById('pdfRows');
+  const form = document.getElementById('importForm');
+  let directoryHandle = null;
+  let catalog = { version: 1, pdfs: [] };
+  const MANIFEST = 'manifest.json';
+
+  function status(el, msg, kind='') { el.textContent = msg; el.className = 'status ' + kind; }
+  function safeBaseName(value) {
+    const cleaned = String(value || '').normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0,100);
+    return cleaned || 'english-community-material';
+  }
+  function escapeText(value) { return String(value ?? ''); }
+  async function readCatalog() {
+    try {
+      const handle = await directoryHandle.getFileHandle(MANIFEST);
+      const file = await handle.getFile();
+      const parsed = JSON.parse(await file.text());
+      catalog = parsed && Array.isArray(parsed.pdfs) ? parsed : { version: 1, pdfs: [] };
+    } catch (e) {
+      if (e && e.name !== 'NotFoundError') throw e;
+      catalog = { version: 1, pdfs: [] };
+    }
+  }
+  async function writeCatalog() {
+    const handle = await directoryHandle.getFileHandle(MANIFEST, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(JSON.stringify(catalog, null, 2) + '\n');
+    await writable.close();
+  }
+  async function refreshList() {
+    if (!directoryHandle) return;
+    await readCatalog();
+    rows.replaceChildren();
+    if (!catalog.pdfs.length) {
+      const tr = document.createElement('tr'); const td = document.createElement('td');
+      td.colSpan = 5; td.className = 'empty'; td.textContent = '등록된 PDF가 없습니다.'; tr.append(td); rows.append(tr); return;
+    }
+    for (const item of [...catalog.pdfs].sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)))) {
+      const tr = document.createElement('tr');
+      for (const value of [item.title, item.session || '—', item.createdAt || '—', item.fileName]) {
+        const td = document.createElement('td'); td.textContent = escapeText(value); tr.append(td);
+      }
+      const actionTd = document.createElement('td'); const actions = document.createElement('div'); actions.className = 'file-actions';
+      const openBtn = document.createElement('button'); openBtn.className = 'secondary'; openBtn.textContent = '열기';
+      openBtn.addEventListener('click', async () => {
+        try { const h = await directoryHandle.getFileHandle(item.fileName); const f = await h.getFile(); const url = URL.createObjectURL(f); const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),60000); }
+        catch { status(importStatus, '파일을 열 수 없습니다. 실제 파일이 폴더에 있는지 확인해 주세요.', 'error'); }
+      });
+      const removeBtn = document.createElement('button'); removeBtn.className = 'secondary'; removeBtn.textContent = '목록에서 제거';
+      removeBtn.addEventListener('click', async () => {
+        if (!confirm(`목록에서 “${item.title}”을 제거할까요? 실제 PDF 파일은 삭제하지 않습니다.`)) return;
+        catalog.pdfs = catalog.pdfs.filter(p => p.id !== item.id); await writeCatalog(); await refreshList();
+        status(importStatus, '목록에서 제거했습니다. PDF 파일 자체는 보관 폴더에 남아 있습니다.', 'success');
+      });
+      actions.append(openBtn, removeBtn); actionTd.append(actions); tr.append(actionTd); rows.append(tr);
+    }
+  }
+  chooseButton.addEventListener('click', async () => {
+    if (!('showDirectoryPicker' in window)) { status(folderStatus, '이 브라우저는 폴더 접근 기능을 지원하지 않습니다. 최신 Chrome/Edge를 사용해 주세요.', 'error'); return; }
+    try {
+      directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      const permission = await directoryHandle.requestPermission({ mode: 'readwrite' });
+      if (permission !== 'granted') throw new Error('폴더 쓰기 권한이 허용되지 않았습니다.');
+      await readCatalog(); await refreshList();
+      folderStatus.textContent = `선택한 폴더: ${directoryHandle.name} — PDF는 이 PC에만 저장됩니다.`;
+      importButton.disabled = false; refreshButton.disabled = false;
+      status(importStatus, '폴더 연결이 완료되었습니다.', 'success');
+    } catch (e) { status(folderStatus, e.message || '폴더 선택이 취소되었거나 실패했습니다.', 'error'); }
+  });
+  refreshButton.addEventListener('click', async () => { try { await refreshList(); status(importStatus, '목록을 새로고침했습니다.', 'success'); } catch(e) { status(importStatus, e.message, 'error'); } });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!directoryHandle) { status(importStatus, '먼저 private_pdfs 폴더를 선택해 주세요.', 'error'); return; }
+    const file = document.getElementById('pdfFile').files[0];
+    const title = document.getElementById('title').value.trim();
+    const session = document.getElementById('session').value.trim();
+    if (!file || !title) { status(importStatus, '제목과 PDF 파일을 지정해 주세요.', 'error'); return; }
+    if (!file.name.toLowerCase().endsWith('.pdf') || file.type && file.type !== 'application/pdf') { status(importStatus, 'PDF 파일만 등록할 수 있습니다.', 'error'); return; }
+    if (file.size < 5 || file.size > 50 * 1024 * 1024) { status(importStatus, 'PDF 크기는 5 bytes 이상 50 MB 이하이어야 합니다.', 'error'); return; }
+    const head = new Uint8Array(await file.slice(0,5).arrayBuffer());
+    if (new TextDecoder().decode(head) !== '%PDF-') { status(importStatus, '파일 내부 서명이 PDF 형식과 일치하지 않습니다.', 'error'); return; }
+    importButton.disabled = true; status(importStatus, '로컬 폴더에 복사하는 중…');
+    try {
+      const supplied = document.getElementById('customFilename').value.trim();
+      let fileName = supplied ? supplied : safeBaseName(session ? `listening-${session}` : title) + '.pdf';
+      fileName = fileName.replace(/[\\/:*?"<>|]/g, '-').replace(/\.pdf$/i, '') + '.pdf';
+      if (fileName.length > 124) fileName = fileName.slice(0,120) + '.pdf';
+      if (catalog.pdfs.some(p => p.fileName.toLowerCase() === fileName.toLowerCase())) {
+        fileName = fileName.replace(/\.pdf$/i, '') + '-' + new Date().toISOString().replace(/[-:.TZ]/g,'').slice(0,14) + '.pdf';
+      }
+      const handle = await directoryHandle.getFileHandle(fileName, { create: true });
+      const writable = await handle.createWritable(); await writable.write(file); await writable.close();
+      const now = new Date();
+      catalog.pdfs.push({ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`, title, session, fileName, createdAt: now.toISOString().slice(0,10) });
+      await writeCatalog(); await refreshList(); form.reset();
+      status(importStatus, `등록 완료: ${fileName}. 파일과 manifest.json은 선택한 로컬 폴더에 저장되었습니다.`, 'success');
+    } catch (e) { status(importStatus, `등록에 실패했습니다: ${e.message || '알 수 없는 오류'}`, 'error'); }
+    finally { importButton.disabled = false; }
+  });
+})();
+</script></body></html>

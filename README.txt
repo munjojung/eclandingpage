@@ -1,28 +1,9 @@
-# English Community — 원클릭 관리자 세션 자동 점검
+English Community — Phase 1 local PDF workflow
 
-## 실행
-1. ZIP 압축을 풉니다.
-2. `RUN_SECURITY_TEST.bat`을 더블클릭합니다.
-3. 배포된 사이트 주소를 입력합니다. 예: `https://your-site.vercel.app`
-4. 관리자 비밀번호를 입력합니다. 입력 중 화면에 표시되지 않습니다.
-5. 결과 화면의 PASS/FAIL을 확인합니다.
+1) Generate worksheets using the deployed generator.html and save as PDF.
+2) Run RUN_LOCAL_PDF_LIBRARY.bat.
+3) Choose the private_pdfs folder in local-pdf-library.html.
+4) Select the saved PDF and register it locally.
+5) PDFs are not served online in this phase. download.html intentionally explains this limitation.
 
-Python 3만 필요하며, 추가 pip 패키지는 필요하지 않습니다.
-
-## 테스트 항목
-- 로그인 전 `/api/admin` 접근 차단(401)
-- 잘못된 관리자 비밀번호 거부(401)
-- 올바른 비밀번호 로그인(200)
-- 세션 쿠키의 HttpOnly 및 SameSite 속성
-- 로그인 응답 JSON에 세션 토큰이 포함되지 않는지
-- `/api/auth/me` 인증 상태 확인
-- 로그인 후 `/api/admin` 접근
-- 잘못된 Origin의 변경 요청 차단(403)
-- 로그아웃 후 세션 폐기 확인
-
-## 주의
-- 이 테스트는 배포된 사이트를 호출합니다. 사이트가 이미 세션 인증 코드로 배포되어 있어야 합니다.
-- 데이터 삭제/수정은 수행하지 않습니다. Origin 테스트에는 빈 `items` 목록을 보냅니다.
-- 자동 테스트가 성공해도 전체 보안 감사나 XSS/Rate Limit 검증을 대체하지 않습니다.
-- `APP_ORIGIN`은 접속할 사이트의 정확한 Origin이어야 합니다.
-- 세션 테이블 `esl_admin_sessions_v2`가 Neon에 생성되어 있어야 합니다.
+See PHASE1_LOCAL_PDF_SETUP.md for details and future private-cloud migration.
