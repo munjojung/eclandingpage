@@ -74,6 +74,9 @@
 
   </main>
 
+  <!-- HIDDEN PRINT IFRAME (새 창/about:blank 탭 없이 비가시 배경 인쇄용) -->
+  <iframe id="printFrame" style="position: absolute; width: 0; height: 0; border: 0; visibility: hidden;"></iframe>
+
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs border border-slate-800">
     <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
@@ -146,14 +149,15 @@
       renderList(filtered);
     }
 
-    // 💡 정확히 2페이지로 고정되어 출력되는 인쇄 및 PDF 저장 함수
+    // 💡 새 탭(about:blank) 창을 띄우지 않고 숨겨진 iframe으로 바로 PDF 창을 호출하는 함수
     function downloadPDF(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
 
-      showToast('인쇄/PDF 저장 창을 준비 중입니다...', 'info');
+      showToast('PDF 저장 창을 불러오는 중입니다...', 'info');
 
-      const printWindow = window.open('', '_blank');
+      const iframe = document.getElementById('printFrame');
+      const iframeDoc = iframe.contentWindow.document;
       
       const htmlContent = `
         <!DOCTYPE html>
@@ -275,13 +279,15 @@
         </html>
       `;
 
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      printWindow.focus();
+      iframeDoc.open();
+      iframeDoc.write(htmlContent);
+      iframeDoc.close();
 
+      // 렌더링 준비 완료 후 오프스크린 인쇄 호출 (새 탭 미생성)
       setTimeout(() => {
-        printWindow.print();
-      }, 500);
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }, 400);
     }
 
     function showToast(msg, type = 'info') {
