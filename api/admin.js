@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { verifyAdminSession } from './_lib/admin-session.js';
 
 export default async function handler(req, res) {
   // 1. CORS / APP_ORIGIN 검증 (잘못된 Origin 요청은 403 차단)
@@ -9,46 +10,16 @@ export default async function handler(req, res) {
     return res.status(403).json({ success: false, error: '허용되지 않은 Origin 접근입니다.' });
   }
 
-  // 2. 환경 변수 기반 관리자 설정 확인
-  const adminSecret = process.env.ADMIN_PASSWORD;
-  if (!adminSecret || adminSecret.length < 16) {
-    return res.status(503).json({ success: false, error: '관리자 인증 설정이 올바르지 않습니다.' });
-  }
-
-  // 3. 인증 토큰 추출 (Authorization 헤더 또는 쿠키에서 동시 탐색)
-  const authHeader = req.headers.authorization;
-  let token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-
-  if (!token && req.headers.cookie) {
-    const cookies = req.headers.cookie.split(';');
-    for (const cookie of cookies) {
-      const [name, val] = cookie.trim().split('=');
-      if (name === 'admin_session') {
-        token = val;
-        break;
-      }
-    }
-  }
-
-  if (!token) {
-    return res.status(401).json({ success: false, error: '인증 토큰이 없습니다.' });
+  // 2. 공통 모듈을 통한 세션 인증 검증
+  const sessionCheck = await verifyAdminSession(req);
+  if (!sessionCheck.isValid) {
+    return res.status(401).json({ success: false, error: sessionCheck.error });
   }
 
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    // 4. 세션 유효성 검증
-    const sessions = await sql`
-      SELECT token FROM esl_sessions 
-      WHERE token = ${token} AND expires_at > CURRENT_TIMESTAMP 
-      LIMIT 1;
-    `;
-
-    if (sessions.length === 0) {
-      return res.status(401).json({ success: false, error: '세션이 만료되었거나 유효하지 않습니다.' });
-    }
-
-    // --- 5. 기존 관리자 API 비즈니스 로직 (GET, PUT, DELETE, POST) ---
+    // --- 기존 관리자 비즈니스 로직 (GET, PUT, DELETE, POST) ---
     if (req.method === 'GET') {
       const type = req.query.type;
       const targetDate = req.query.date;
