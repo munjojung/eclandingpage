@@ -85,7 +85,7 @@
         <i class="fa-solid fa-shield-halved"></i>
       </div>
 
-      <h3 class="font-bold font-jakarta text-navy-900 text-xl mb-2">🎯 회원 전용 다운로드</h3>
+      <h3 class="font-bold font-jakarta text-navy-900 text-xl mb-2">회원 전용 다운로드</h3>
       <p class="text-xs text-slate-500 mb-6 leading-relaxed">학습지를 다운로드하시려면 커뮤니티 등록 시 사용하신<br>휴대폰 번호를 입력해 주세요.</p>
       
       <div class="flex gap-2 mb-3">
@@ -186,7 +186,7 @@
       pendingDownloadId = null;
     }
 
-    // 전화번호 인증 로직
+    // 💡 휴대폰 번호 회원 인증 및 통신 (오류 발생 시에도 안전한 Fallback 적용)
     async function verifyAndDownload() {
       const phoneInput = document.getElementById('modalPhoneInput').value.trim();
       const errorDiv = document.getElementById('authErrorMsg');
@@ -205,7 +205,6 @@
         return;
       }
 
-      // API 연동 확인 및 정적 배포(Vercel) Fallback 지원
       try {
         const res = await fetch('/api/check', {
           method: 'POST',
@@ -213,19 +212,18 @@
           body: JSON.stringify({ phone: phoneInput })
         });
         
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success || result.exists || result.valid) {
-            closeAuthModal();
-            showToast('회원 인증이 완료되었습니다. PDF 창을 준비합니다.', 'success');
-            executePDFDownload(pendingDownloadId);
-            return;
-          }
+        const result = await res.json();
+        if (res.ok && (result.success || result.data)) {
+          closeAuthModal();
+          showToast('회원 인증이 완료되었습니다. PDF를 생성합니다.', 'success');
+          executePDFDownload(pendingDownloadId);
+          return;
         }
       } catch (err) {
-        // API 오류 시 정적 통과
+        console.warn('API check bypassed due to network/server response:', err);
       }
 
+      // 010 번호 형식이면 네트워크 에러나 미등록 상태여도 다운로드 원활하게 진행
       if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
         closeAuthModal();
         showToast('회원 인증 완료! PDF 창을 준비합니다.', 'success');
@@ -237,7 +235,7 @@
       errorDiv.style.display = 'block';
     }
 
-    // PDF 생성 및 인쇄/다운로드 창 출력 (보안/크로스 브라우저 호환 방식)
+    // 💡 새 창을 통한 안정적인 PDF 인쇄 및 저장 트리거 함수
     function executePDFDownload(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
@@ -433,21 +431,20 @@
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-              }, 300);
+              }, 400);
             };
           <\/script>
         </body>
         </html>
       `;
 
-      // 새 창을 열어 안정적으로 인쇄/PDF 저장 창 호출
       const printWin = window.open('', '_blank');
       if (printWin) {
         printWin.document.open();
         printWin.document.write(htmlContent);
         printWin.document.close();
       } else {
-        showToast('팝업 블록이 설정되어 있습니다. 팝업 허용 후 다시 시도해 주세요.', 'error');
+        showToast('브라우저 팝업 차단이 설정되어 있습니다. 팝업을 허용해 주세요.', 'error');
       }
     }
 
