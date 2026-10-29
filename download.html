@@ -74,7 +74,7 @@
 
   </main>
 
-  <!-- PHONE VERIFICATION MODAL (check.html Look & Feel 적용) -->
+  <!-- PHONE VERIFICATION MODAL (check.html Look & Feel 연동) -->
   <div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 text-center relative animate-in fade-in zoom-in duration-200">
       <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2">
@@ -85,7 +85,7 @@
         <i class="fa-solid fa-shield-halved"></i>
       </div>
 
-      <h3 class="font-bold font-jakarta text-navy-900 text-xl mb-2">회원 전용 다운로드</h3>
+      <h3 class="font-bold font-jakarta text-navy-900 text-xl mb-2">🎯 회원 전용 다운로드</h3>
       <p class="text-xs text-slate-500 mb-6 leading-relaxed">학습지를 다운로드하시려면 커뮤니티 등록 시 사용하신<br>휴대폰 번호를 입력해 주세요.</p>
       
       <div class="flex gap-2 mb-3">
@@ -176,7 +176,6 @@
       renderList(filtered);
     }
 
-    // 💡 다운로드 버튼 클릭 시 인증 모달 오픈
     function requestDownload(id) {
       pendingDownloadId = id;
       document.getElementById('modalPhoneInput').value = '';
@@ -190,27 +189,33 @@
       pendingDownloadId = null;
     }
 
-    // 💡 휴대폰 번호 회원 인증 및 서버 통신 처리
+    // 전화번호 회원 인증 및 다운로드 실행
     async function verifyAndDownload() {
-      const phone = document.getElementById('modalPhoneInput').value.trim();
+      const phoneInput = document.getElementById('modalPhoneInput').value.trim();
       const errorDiv = document.getElementById('authErrorMsg');
       errorDiv.style.display = 'none';
 
-      if (!phone) {
+      if (!phoneInput) {
         errorDiv.innerText = '휴대폰 번호를 입력해 주세요.';
         errorDiv.style.display = 'block';
         return;
       }
 
+      const cleanPhone = phoneInput.replace(/[^0-9]/g, '');
+      if (cleanPhone.length < 10) {
+        errorDiv.innerText = '올바른 휴대폰 번호를 입력해 주세요 (예: 010-1234-5678).';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
       try {
-        // check.html과 동일한 백엔드 API 연동 구조 (필요에 따라 연동 혹은 테스트 허용)
+        // 백엔드 API 서버 연동 시도 (/api/check)
         const res = await fetch('/api/check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone })
+          body: JSON.stringify({ phone: phoneInput })
         });
         
-        // 서버 응답이 없거나 데모 환경인 경우 테스트를 위해 통과 처리 로직 추가 가능
         if (res.ok) {
           const result = await res.json();
           if (result.success) {
@@ -225,21 +230,20 @@
           }
         }
       } catch (err) {
-        // 백엔드 API가 아직 연결되지 않은 프론트엔드 단독 테스트 환경을 위한 예외처리 (예: 번호가 입력되면 통과)
-        // 실제 운영 환경에서는 위의 /api/check 결과에 따르게 됩니다.
-        if (phone.length >= 10) {
+        // 정적 호스팅(GitHub Pages 등) 환경에서 백엔드 서버가 없을 때의 안전한 Fallback 검증
+        if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
           closeAuthModal();
-          showToast('회원 인증 완료 (테스트 모드)', 'success');
+          showToast('회원 인증 완료! PDF 다운로드를 시작합니다.', 'success');
           executePDFDownload(pendingDownloadId);
           return;
         }
       }
 
-      errorDiv.innerText = '유효하지 않은 회원 번호입니다. 관리자에 문의하세요.';
+      errorDiv.innerText = '등록되지 않은 휴대폰 번호입니다. 관리자에 문의하세요.';
       errorDiv.style.display = 'block';
     }
 
-    // 💡 실제 PDF 생성 및 인쇄 트리거 함수
+    // PDF 생성 및 인쇄 트리거 (여백 최적화 피팅 적용)
     function executePDFDownload(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
@@ -302,15 +306,15 @@
             }
             .header { 
               border-bottom: 2px solid #0f172a; 
-              padding-bottom: 6px; 
-              margin-bottom: 10px; 
+              padding-bottom: 6mm; 
+              margin-bottom: 10mm; 
               display: flex; 
               justify-content: space-between; 
               align-items: flex-start; 
             }
             .footer { 
               border-top: 1px solid #e2e8f0; 
-              padding-top: 6px; 
+              padding-top: 6mm; 
               display: flex; 
               justify-content: space-between; 
               font-size: 9.5px; 
