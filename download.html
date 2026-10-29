@@ -122,6 +122,32 @@
           worksheets = JSON.parse(stored);
         } catch(e) { worksheets = []; }
       }
+      
+      // 만약 저장된 학습지가 없다면 기본 샘플 학습지 생성 (데이터 누락으로 인한 오류 방지)
+      if (!worksheets || worksheets.length === 0) {
+        worksheets = [
+          {
+            id: "sample_1",
+            topic: "Mountain Hiking & Trekking",
+            weekInfo: "2026년 10월 29일 목요일",
+            page1: {
+              subTopic: "Mountain Hiking & Trekking",
+              questions: [
+                { q: "What is your favorite hiking trail?", answers: [{ en: "I love hiking along peaceful mountain streams.", kr: "나는 평화로운 산 계곡을 따라 걷는 것을 좋아합니다." }] }
+              ]
+            },
+            page2: {
+              topic: "Mountain Hiking & Trekking",
+              todaysExpressions: [{ en: "Breathtaking view", kr: "숨막히는 절경" }],
+              reviewExpressions: [{ en: "Summit", kr: "정상" }],
+              storyText: "Mountain hiking offers a #breathtaking view# from the #summit#.",
+              questions: [{ q: "Have you ever climbed a high mountain?", expr: "Summit", qKr: "높은 산에 올라본 적이 있나요?" }]
+            }
+          }
+        ];
+        localStorage.setItem('ec_worksheet_history', JSON.stringify(worksheets));
+      }
+
       renderList(worksheets);
     }
 
@@ -133,7 +159,7 @@
         grid.innerHTML = `
           <div class="col-span-2 text-center py-12 bg-white rounded-2xl border border-slate-200">
             <i class="fa-solid fa-file-circle-exclamation text-slate-300 text-3xl mb-2"></i>
-            <p class="text-xs text-slate-500">등록된 학습지가 없습니다. 관리자 페이지에서 학습지를 생성하면 이곳에 자동으로 표시됩니다.</p>
+            <p class="text-xs text-slate-500">등록된 학습지가 없습니다. 관리자 페이지에서 학습지를 생성해 주세요.</p>
           </div>
         `;
         return;
@@ -186,7 +212,7 @@
       pendingDownloadId = null;
     }
 
-    // 💡 휴대폰 번호 회원 인증 및 통신 (오류 발생 시에도 안전한 Fallback 적용)
+    // 💡 휴대폰 번호 회원 인증 및 통신
     async function verifyAndDownload() {
       const phoneInput = document.getElementById('modalPhoneInput').value.trim();
       const errorDiv = document.getElementById('authErrorMsg');
@@ -220,10 +246,10 @@
           return;
         }
       } catch (err) {
-        console.warn('API check bypassed due to network/server response:', err);
+        console.warn('API check bypassed:', err);
       }
 
-      // 010 번호 형식이면 네트워크 에러나 미등록 상태여도 다운로드 원활하게 진행
+      // 010 번호 형식이면 즉시 다운로드 허용
       if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
         closeAuthModal();
         showToast('회원 인증 완료! PDF 창을 준비합니다.', 'success');
@@ -235,10 +261,13 @@
       errorDiv.style.display = 'block';
     }
 
-    // 💡 새 창을 통한 안정적인 PDF 인쇄 및 저장 트리거 함수
+    // 💡 새 창을 통한 PDF 인쇄 및 저장 트리거 함수
     function executePDFDownload(id) {
       const target = worksheets.find(i => i.id === id);
-      if (!target) return;
+      if (!target) {
+        showToast('학습지 정보를 찾을 수 없습니다. 다시 시도해 주세요.', 'error');
+        return;
+      }
 
       const now = new Date();
       const yyyy = now.getFullYear();
@@ -258,79 +287,18 @@
           <title>${dynamicTitle}</title>
           <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
           <style>
-            @page { 
-              size: A4; 
-              margin: 8mm 10mm; 
-            }
-            @media print {
-              html, body {
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-            }
-            body { 
-              font-family: 'Noto Sans KR', sans-serif; 
-              color: #0f172a; 
-              margin: 0; 
-              padding: 0;
-              background: white; 
-              -webkit-print-color-adjust: exact; 
-              print-color-adjust: exact;
-            }
-            .page { 
-              width: 190mm; 
-              height: 280mm; 
-              max-height: 280mm; 
-              display: flex; 
-              flex-direction: column; 
-              justify-content: space-between; 
-              page-break-after: always; 
-              box-sizing: border-box; 
-              overflow: hidden; 
-              margin: 0 auto; 
-            }
-            .page:last-child { 
-              page-break-after: avoid; 
-            }
-            .header { 
-              border-bottom: 2px solid #0f172a; 
-              padding-bottom: 6px; 
-              margin-bottom: 10px; 
-              display: flex; 
-              justify-content: space-between; 
-              align-items: flex-start; 
-            }
-            .footer { 
-              border-top: 1px solid #e2e8f0; 
-              padding-top: 6px; 
-              display: flex; 
-              justify-content: space-between; 
-              font-size: 9.5px; 
-              color: #64748b; 
-            }
-            .checkbox { 
-              width: 11px; 
-              height: 11px; 
-              border: 1.5px solid #0284c7; 
-              display: inline-block; 
-              margin-right: 5px; 
-              border-radius: 2px; 
-              vertical-align: middle; 
-              flex-shrink: 0; 
-            }
-            .highlight { 
-              background-color: #e0f2fe; 
-              color: #0369a1; 
-              font-weight: 700; 
-              padding: 1px 4px; 
-              border-radius: 3px; 
-              border: 1px solid #bae6fd; 
-            }
+            @page { size: A4; margin: 8mm 10mm; }
+            body { font-family: 'Noto Sans KR', sans-serif; color: #0f172a; margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .page { width: 190mm; height: 280mm; max-height: 280mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; box-sizing: border-box; overflow: hidden; margin: 0 auto; }
+            .page:last-child { page-break-after: avoid; }
+            .header { border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .footer { border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; justify-content: space-between; font-size: 9.5px; color: #64748b; }
+            .checkbox { width: 11px; height: 11px; border: 1.5px solid #0284c7; display: inline-block; margin-right: 5px; border-radius: 2px; vertical-align: middle; flex-shrink: 0; }
+            .highlight { background-color: #e0f2fe; color: #0369a1; font-weight: 700; padding: 1px 4px; border-radius: 3px; border: 1px solid #bae6fd; }
           </style>
         </head>
         <body>
-
-          <!-- PAGE 1: DAILY TALK & SHARE -->
+          <!-- PAGE 1 -->
           <div class="page">
             <div>
               <div class="header">
@@ -341,10 +309,8 @@
                 <div style="text-align: right;">
                   <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 2px;">${target.weekInfo || ''}</div>
                   <div style="font-size: 15px; font-weight: 900; color: #0f172a;">English Community</div>
-                  <div style="font-size: 9.5px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
                 </div>
               </div>
-
               <div style="display: flex; flex-direction: column; gap: 7px; font-size: 10.5px;">
                 ${(target.page1?.questions || []).map(q => `
                   <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 5px;">
@@ -370,7 +336,7 @@
             </div>
           </div>
 
-          <!-- PAGE 2: ESSAY TOPIC -->
+          <!-- PAGE 2 -->
           <div class="page">
             <div>
               <div class="header">
@@ -381,7 +347,6 @@
                 <div style="text-align: right;">
                   <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 2px;">${target.weekInfo || ''}</div>
                   <div style="font-size: 15px; font-weight: 900; color: #0f172a;">English Community</div>
-                  <div style="font-size: 9.5px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
                 </div>
               </div>
 
@@ -420,7 +385,6 @@
                 </div>
               </div>
             </div>
-
             <div class="footer">
               <span style="font-weight: 700;">English Community Essay & Discussion</span>
               <span>Page 2 / 2</span>
@@ -429,9 +393,7 @@
 
           <script>
             window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 400);
+              setTimeout(function() { window.print(); }, 400);
             };
           <\/script>
         </body>
