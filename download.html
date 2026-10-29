@@ -76,12 +76,12 @@
 
   </main>
 
-  <!-- HIDDEN PRINT/PDF RENDER CONTAINER -->
-  <div id="pdfExportContainer" class="hidden"></div>
+  <!-- OFF-SCREEN RENDER CONTAINER FOR PDF EXPORT (html2canvas 백지 방지용) -->
+  <div id="pdfExportContainer" style="position: absolute; left: -9999px; top: 0; width: 210mm; background: white;"></div>
 
-  <!-- TOAST -->
+  <!-- TOAST NOTIFICATION -->
   <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs border border-slate-800">
-    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
     <span id="toastMsg">알림 메시지</span>
   </div>
 
@@ -94,7 +94,7 @@
     });
 
     function loadWorksheets() {
-      // 관리자 페이지와 공유하는 로컬스토리지 키 활용 (없으면 샘플 제공)
+      // 관리자 페이지(generator.html)와 공유하는 로컬스토리지 저장소 키
       const stored = localStorage.getItem('ec_worksheet_history');
       if (stored) {
         try {
@@ -112,7 +112,7 @@
         grid.innerHTML = `
           <div class="col-span-2 text-center py-12 bg-white rounded-2xl border border-slate-200">
             <i class="fa-solid fa-file-circle-exclamation text-slate-300 text-3xl mb-2"></i>
-            <p class="text-xs text-slate-500">등록된 학습지가 없습니다. 관리자가 학습지를 생성하면 이곳에 표시됩니다.</p>
+            <p class="text-xs text-slate-500">등록된 학습지가 없습니다. 관리자 페이지에서 학습지를 생성하면 이곳에 자동으로 표시됩니다.</p>
           </div>
         `;
         return;
@@ -145,88 +145,130 @@
 
     function filterWorksheets() {
       const keyword = document.getElementById('searchBox').value.toLowerCase();
-      const filtered = worksheets.filter(i => i.topic.toLowerCase().includes(keyword) || (i.weekInfo && i.weekInfo.toLowerCase().includes(keyword)));
+      const filtered = worksheets.filter(i => 
+        i.topic.toLowerCase().includes(keyword) || 
+        (i.weekInfo && i.weekInfo.toLowerCase().includes(keyword))
+      );
       renderList(filtered);
     }
 
-    // PDF 다운로드 실행 함수 (관리자 페이지의 템플릿 구조를 활용해 숨겨진 영역에서 렌더링 후 PDF 변환)
+    // PDF 다운로드 실행 함수 (백지 방지 및 오프스크린 HTML 렌더링)
     function downloadPDF(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
 
-      showToast('PDF 파일 생성 중... 잠시만 기다려주세요.', 'info');
+      showToast('PDF 파일을 생성 중입니다... 잠시만 기다려주세요.', 'info');
 
-      // 임시로 PDF 추출용 HTML 생성
       const exportContainer = document.getElementById('pdfExportContainer');
       exportContainer.innerHTML = `
-        <div style="background: white; color: black; padding: 20mm; font-family: 'Noto Sans KR', sans-serif; width: 210mm; box-sizing: border-box;">
-          <!-- PAGE 1 -->
-          <div style="min-height: 250mm; display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="background: white; color: #0f172a; padding: 18mm 15mm; font-family: 'Noto Sans KR', sans-serif; width: 210mm; box-sizing: border-box;">
+          
+          <!-- PAGE 1: DAILY TALK & SHARE -->
+          <div style="min-height: 260mm; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-              <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between;">
+              <!-- Header -->
+              <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                  <div style="font-size: 11px; color: #64748b; font-weight: 600;">${target.weekInfo}</div>
-                  <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 4px 0;">Daily Talk & Share</h2>
-                  <p style="font-size: 12px; color: #0284c7; font-weight: 600;">Let's talk about ${target.page1.subTopic || target.topic}</p>
+                  <div style="font-size: 11px; color: #64748b; font-weight: 600;">${target.weekInfo || 'Daily Worksheet'}</div>
+                  <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 2px 0 4px 0;">${target.page1?.title || 'Daily Talk & Share'}</h2>
+                  <p style="font-size: 12px; color: #0284c7; font-weight: 700; margin: 0;">Let's talk about ${target.page1?.subTopic || target.topic}</p>
                 </div>
                 <div style="text-align: right;">
                   <div style="font-size: 16px; font-weight: 900; color: #0f172a;">English Community</div>
-                  <div style="font-size: 10px; color: #0284c7;">Speak Freely, Connect Deeply.</div>
+                  <div style="font-size: 10px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
                 </div>
               </div>
-              <div style="display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
-                ${target.page1.questions.map(q => `
-                  <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
-                    <div style="font-weight: bold; color: #0f172a; margin-bottom: 4px;">${q.q}</div>
-                    <div style="padding-left: 10px; color: #334155;">
-                      ${q.answers.map(a => `<div>• ${a.en} <br><span style="font-size:10px; color:#64748b;">(${a.kr})</span></div>`).join('')}
+
+              <!-- Questions List -->
+              <div style="display: flex; flex-direction: column; gap: 10px; font-size: 11px;">
+                ${(target.page1?.questions || []).map(q => `
+                  <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
+                    <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px;">${q.q}</div>
+                    <div style="padding-left: 8px; color: #334155; display: flex; flex-direction: column; gap: 3px;">
+                      ${(q.answers || []).map(a => `
+                        <div style="line-height: 1.3;">
+                          <span style="color: #0284c7; font-weight: bold;">▪</span> ${a.en}
+                          <div style="font-size: 10px; color: #64748b; margin-left: 10px;">${a.kr}</div>
+                        </div>
+                      `).join('')}
                     </div>
                   </div>
                 `).join('')}
               </div>
             </div>
-            <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
-              <span>English Community Academic Series</span>
+
+            <!-- Footer -->
+            <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
+              <span style="font-weight: 700;">English Community Academic Series</span>
               <span>Page 1 / 2</span>
             </div>
           </div>
 
-          <div style="page-break-before: always;"></div>
+          <!-- PAGE BREAK -->
+          <div style="page-break-before: always; break-before: page; height: 1px;"></div>
 
-          <!-- PAGE 2 -->
-          <div style="min-height: 250mm; display: flex; flex-direction: column; justify-content: space-between;">
+          <!-- PAGE 2: ESSAY TOPIC -->
+          <div style="min-height: 260mm; display: flex; flex-direction: column; justify-content: space-between; padding-top: 5mm;">
             <div>
-              <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between;">
+              <!-- Header -->
+              <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                  <div style="font-size: 11px; color: #0284c7; font-weight: 600;">English Community Essay Topic</div>
-                  <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 4px 0;">${target.page2.topic || target.topic}</h2>
+                  <div style="font-size: 11px; color: #0284c7; font-weight: 700; text-transform: uppercase;">English Community Essay Topic</div>
+                  <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 2px 0 0 0;">${target.page2?.topic || target.topic}</h2>
                 </div>
                 <div style="text-align: right;">
                   <div style="font-size: 16px; font-weight: 900; color: #0f172a;">English Community</div>
-                  <div style="font-size: 10px; color: #0284c7;">Speak Freely, Connect Deeply.</div>
+                  <div style="font-size: 10px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
                 </div>
               </div>
 
-              <div style="margin-bottom: 15px; background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 11px; line-height: 1.6;">
-                <div style="font-weight: bold; color: #0f172a; margin-bottom: 6px;">📖 Essay Narrative Story</div>
-                <p>${target.page2.storyText}</p>
+              <!-- Key Expressions Summary -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; font-size: 10px;">
+                <div style="background: #f0f9ff; padding: 8px 10px; border-radius: 6px; border: 1px solid #bae6fd;">
+                  <div style="font-weight: 700; color: #0369a1; margin-bottom: 4px;">오늘의 주요 표현</div>
+                  ${(target.page2?.todaysExpressions || []).map((ex, i) => `
+                    <div style="margin-bottom: 3px;">
+                      <strong>${i+1}. ${ex.en}</strong>: ${ex.kr}
+                    </div>
+                  `).join('')}
+                </div>
+                <div style="background: #f8fafc; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                  <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">복습 주요 표현</div>
+                  ${(target.page2?.reviewExpressions || []).map((ex, i) => `
+                    <div style="margin-bottom: 3px;">
+                      <strong>${i+1}. ${ex.en}</strong>: ${ex.kr}
+                    </div>
+                  `).join('')}
+                </div>
               </div>
 
-              <div style="font-size: 11px;">
-                <div style="font-weight: bold; color: #0f172a; margin-bottom: 6px;">☑ Discussion & Expressions</div>
-                ${target.page2.questions.map(q => `
-                  <div style="padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
-                    <div style="font-weight: 600; color: #0f172a;">${q.q}</div>
-                    <div style="color: #64748b; font-size: 10px;">> #${q.expr}# : ${q.qKr}</div>
-                  </div>
-                `).join('')}
+              <!-- Narrative Story -->
+              <div style="margin-bottom: 14px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 11px; line-height: 1.6; color: #1e293b;">
+                <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">📖 Essay Narrative Story</div>
+                <p style="margin: 0; font-family: serif;">${(target.page2?.storyText || '').replace(/#([^#]+)#/g, '<span style="background-color:#e0f2fe; color:#0369a1; font-weight:bold; padding:0 3px; border-radius:3px;">$1</span>')}</p>
+              </div>
+
+              <!-- Discussion Questions -->
+              <div style="font-size: 10.5px;">
+                <div style="font-weight: 700; color: #0f172a; margin-bottom: 6px;">☑ Essay Discussion Questions</div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  ${(target.page2?.questions || []).map(q => `
+                    <div style="padding: 3px 0; border-bottom: 1px solid #f1f5f9;">
+                      <div style="font-weight: 600; color: #0f172a;">${q.q}</div>
+                      <div style="color: #64748b; font-size: 9.5px; margin-top: 1px;">&gt; #${q.expr}# : ${q.qKr}</div>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
             </div>
-            <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
-              <span>English Community Essay & Discussion</span>
+
+            <!-- Footer -->
+            <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
+              <span style="font-weight: 700;">English Community Essay & Discussion</span>
               <span>Page 2 / 2</span>
             </div>
           </div>
+
         </div>
       `;
 
@@ -234,21 +276,40 @@
         margin:       0,
         filename:     `EnglishCommunity_${target.topic.replace(/\s+/g, '_')}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      html2pdf().set(opt).from(exportContainer).save().then(() => {
-        exportContainer.innerHTML = '';
-        showToast('PDF 다운로드가 완료되었습니다!', 'success');
-      });
+      // 렌더링 타임랙 보장을 위한 300ms 지연 후 PDF 변환
+      setTimeout(() => {
+        html2pdf().set(opt).from(exportContainer).save().then(() => {
+          exportContainer.innerHTML = '';
+          showToast('PDF 다운로드가 성공적으로 완료되었습니다!', 'success');
+        }).catch(err => {
+          console.error(err);
+          showToast('PDF 변환 중 오류가 발생했습니다.', 'error');
+        });
+      }, 300);
     }
 
     function showToast(msg, type = 'info') {
       const toast = document.getElementById('toast');
-      document.getElementById('toastMsg').innerText = msg;
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toastMsg.innerText = msg;
+      if (type === 'success') {
+        toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+      } else if (type === 'error') {
+        toastIcon.className = "fa-solid fa-circle-exclamation text-rose-400";
+      } else {
+        toastIcon.className = "fa-solid fa-circle-info text-sky-400";
+      }
+
       toast.classList.remove('translate-y-20', 'opacity-0');
-      setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
     }
   </script>
 </body>
