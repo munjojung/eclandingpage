@@ -74,7 +74,7 @@
 
   </main>
 
-  <!-- HIDDEN PRINT IFRAME (새 창/about:blank 탭 없이 비가시 배경 인쇄용) -->
+  <!-- HIDDEN PRINT IFRAME -->
   <iframe id="printFrame" style="position: absolute; width: 0; height: 0; border: 0; visibility: hidden;"></iframe>
 
   <!-- TOAST NOTIFICATION -->
@@ -149,12 +149,22 @@
       renderList(filtered);
     }
 
-    // 💡 브라우저 상단/하단 인쇄 문구(시각, 제목, URL)를 제거한 PDF 저장 함수
+    // 💡 여백 피팅 및 연월일시 동적 파일명이 적용된 PDF 다운로드 함수
     function downloadPDF(id) {
       const target = worksheets.find(i => i.id === id);
       if (!target) return;
 
       showToast('PDF 저장 창을 불러오는 중입니다...', 'info');
+
+      // 연월일시 구하기 (예: 20261029_1430)
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      const timeStr = `${yyyy}${mm}${dd}_${hh}${min}`;
+      const dynamicTitle = `English Community - 학습지 - ${timeStr}`;
 
       const iframe = document.getElementById('printFrame');
       const iframeDoc = iframe.contentWindow.document;
@@ -164,13 +174,12 @@
         <html lang="ko">
         <head>
           <meta charset="UTF-8">
-          <title></title> <!-- 제목을 비워 상단 제목 텍스트 제거 -->
+          <title>${dynamicTitle}</title>
           <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
           <style>
-            /* 브라우저 상단/하단 머리글·바닥글(날짜, 제목, URL) 인쇄 억제 */
             @page { 
               size: A4; 
-              margin: 10mm;
+              margin: 8mm 10mm; 
             }
             @media print {
               html, body {
@@ -189,8 +198,8 @@
             }
             .page { 
               width: 190mm; 
-              height: 275mm; 
-              max-height: 275mm; 
+              height: 280mm; 
+              max-height: 280mm; 
               display: flex; 
               flex-direction: column; 
               justify-content: space-between; 
@@ -204,26 +213,26 @@
             }
             .header { 
               border-bottom: 2px solid #0f172a; 
-              padding-bottom: 6px; 
-              margin-bottom: 10px; 
+              padding-bottom: 5px; 
+              margin-bottom: 8px; 
               display: flex; 
               justify-content: space-between; 
               align-items: flex-start; 
             }
             .footer { 
               border-top: 1px solid #e2e8f0; 
-              padding-top: 6px; 
+              padding-top: 5px; 
               display: flex; 
               justify-content: space-between; 
-              font-size: 9.5px; 
+              font-size: 9px; 
               color: #64748b; 
             }
             .checkbox { 
-              width: 11px; 
-              height: 11px; 
+              width: 10px; 
+              height: 10px; 
               border: 1.5px solid #0284c7; 
               display: inline-block; 
-              margin-right: 5px; 
+              margin-right: 4px; 
               border-radius: 2px; 
               vertical-align: middle; 
               flex-shrink: 0; 
@@ -245,27 +254,27 @@
             <div>
               <div class="header">
                 <div>
-                  <div style="font-size: 10.5px; color: #64748b; font-weight: 600;">${target.weekInfo || ''}</div>
-                  <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 2px 0 2px 0;">Daily Talk & Share</h2>
-                  <p style="font-size: 11px; color: #0284c7; font-weight: 700; margin: 0;">Let's talk about ${target.page1?.subTopic || target.topic}</p>
+                  <div style="font-size: 10px; color: #64748b; font-weight: 600;">${target.weekInfo || ''}</div>
+                  <h2 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 1px 0 2px 0;">Daily Talk & Share</h2>
+                  <p style="font-size: 10.5px; color: #0284c7; font-weight: 700; margin: 0;">Let's talk about ${target.page1?.subTopic || target.topic}</p>
                 </div>
                 <div style="text-align: right;">
-                  <div style="font-size: 15px; font-weight: 900; color: #0f172a;">English Community</div>
-                  <div style="font-size: 9.5px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
+                  <div style="font-size: 14px; font-weight: 900; color: #0f172a;">English Community</div>
+                  <div style="font-size: 9px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
                 </div>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 7px; font-size: 10.5px;">
+              <div style="display: flex; flex-direction: column; gap: 5.5px; font-size: 10px;">
                 ${(target.page1?.questions || []).map(q => `
-                  <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">
-                    <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">${q.q}</div>
-                    <div style="padding-left: 6px; color: #334155; display: flex; flex-direction: column; gap: 2px;">
+                  <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 3px;">
+                    <div style="font-weight: 700; color: #0f172a; margin-bottom: 1px;">${q.q}</div>
+                    <div style="padding-left: 5px; color: #334155; display: flex; flex-direction: column; gap: 1.5px;">
                       ${(q.answers || []).map(a => `
-                        <div style="display: flex; align-items: flex-start; line-height: 1.25;">
+                        <div style="display: flex; align-items: flex-start; line-height: 1.2;">
                           <span class="checkbox" style="margin-top: 1px;"></span>
                           <div>
                             <div>${a.en}</div>
-                            <div style="font-size: 9.5px; color: #64748b;">${a.kr}</div>
+                            <div style="font-size: 9px; color: #64748b;">${a.kr}</div>
                           </div>
                         </div>
                       `).join('')}
@@ -285,43 +294,43 @@
             <div>
               <div class="header">
                 <div>
-                  <div style="font-size: 10.5px; color: #0284c7; font-weight: 700; text-transform: uppercase;">English Community Essay Topic</div>
-                  <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 2px 0 0 0;">${target.page2?.topic || target.topic}</h2>
+                  <div style="font-size: 10px; color: #0284c7; font-weight: 700; text-transform: uppercase;">English Community Essay Topic</div>
+                  <h2 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 1px 0 0 0;">${target.page2?.topic || target.topic}</h2>
                 </div>
                 <div style="text-align: right;">
-                  <div style="font-size: 15px; font-weight: 900; color: #0f172a;">English Community</div>
-                  <div style="font-size: 9.5px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
+                  <div style="font-size: 14px; font-weight: 900; color: #0f172a;">English Community</div>
+                  <div style="font-size: 9px; color: #0284c7; font-weight: 600;">Speak Freely, Connect Deeply.</div>
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 9.5px;">
-                <div style="background: #f0f9ff; padding: 6px 8px; border-radius: 5px; border: 1px solid #bae6fd;">
-                  <div style="font-weight: 700; color: #0369a1; margin-bottom: 3px;">오늘의 주요 표현</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; font-size: 9px;">
+                <div style="background: #f0f9ff; padding: 5px 7px; border-radius: 4px; border: 1px solid #bae6fd;">
+                  <div style="font-weight: 700; color: #0369a1; margin-bottom: 2px;">오늘의 주요 표현</div>
                   ${(target.page2?.todaysExpressions || []).map((ex, i) => `
-                    <div style="margin-bottom: 2px;"><strong>${i+1}. #${ex.en}</strong>: ${ex.kr}</div>
+                    <div style="margin-bottom: 1.5px;"><strong>${i+1}. #${ex.en}</strong>: ${ex.kr}</div>
                   `).join('')}
                 </div>
-                <div style="background: #f8fafc; padding: 6px 8px; border-radius: 5px; border: 1px solid #e2e8f0;">
-                  <div style="font-weight: 700; color: #334155; margin-bottom: 3px;">복습 주요 표현</div>
+                <div style="background: #f8fafc; padding: 5px 7px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                  <div style="font-weight: 700; color: #334155; margin-bottom: 2px;">복습 주요 표현</div>
                   ${(target.page2?.reviewExpressions || []).map((ex, i) => `
-                    <div style="margin-bottom: 2px;"><strong>${i+1}. #${ex.en}</strong>: ${ex.kr}</div>
+                    <div style="margin-bottom: 1.5px;"><strong>${i+1}. #${ex.en}</strong>: ${ex.kr}</div>
                   `).join('')}
                 </div>
               </div>
 
-              <div style="margin-bottom: 8px; background: #f8fafc; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 10px; line-height: 1.5; color: #1e293b;">
+              <div style="margin-bottom: 6px; background: #f8fafc; padding: 7px 9px; border-radius: 5px; border: 1px solid #e2e8f0; font-size: 9.5px; line-height: 1.45; color: #1e293b;">
                 <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">📖 Essay Narrative Story</div>
                 <p style="margin: 0; font-family: serif;">${(target.page2?.storyText || '').replace(/#([^#]+)#/g, '<span class="highlight">$1</span>')}</p>
               </div>
 
-              <div style="font-size: 9.5px;">
-                <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">☑ Essay Discussion Questions</div>
-                <div style="display: flex; flex-direction: column; gap: 3px;">
+              <div style="font-size: 9px;">
+                <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px;">☑ Essay Discussion Questions</div>
+                <div style="display: flex; flex-direction: column; gap: 2.5px;">
                   ${(target.page2?.questions || []).map(q => `
-                    <div style="padding: 2px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="padding: 1.5px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
                       <div>
                         <div style="font-weight: 600; color: #0f172a;">${q.q}</div>
-                        <div style="color: #64748b; font-size: 9px; margin-top: 0.5px;">&gt; #${q.expr}# : ${q.qKr}</div>
+                        <div style="color: #64748b; font-size: 8.5px; margin-top: 0.5px;">&gt; #${q.expr}# : ${q.qKr}</div>
                       </div>
                       <span class="checkbox"></span>
                     </div>
