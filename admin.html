@@ -175,22 +175,44 @@
 </div>
 
 <script>
-    let adminToken = '';
     let currentTab = 'inquiries';
     let rawInquiriesData = [];
     let rawMeetupsData = [];
     let rawSchedulesData = [];
 
-    function authenticate() {
-        const pwd = document.getElementById('adminPasswordInput').value.trim();
+    async function authenticate() {
+        const pwd = document.getElementById('adminPasswordInput').value;
         if (!pwd) return alert('비밀번호를 입력하세요.');
-        adminToken = pwd;
-        document.getElementById('authOverlay').style.display = 'none';
-        loadCurrentView();
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ password: pwd })
+            });
+            const result = await res.json().catch(() => ({}));
+            document.getElementById('adminPasswordInput').value = '';
+            if (!res.ok || !result.success) {
+                return alert(result.error || '로그인에 실패했습니다.');
+            }
+            document.getElementById('authOverlay').style.display = 'none';
+            loadCurrentView();
+        } catch (error) {
+            alert('로그인 요청 중 오류가 발생했습니다.');
+        }
     }
 
-    function logout() {
-        adminToken = '';
+    async function logout() {
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({})
+            });
+        } catch (error) {
+            console.error('Logout request failed:', error);
+        }
         document.getElementById('adminPasswordInput').value = '';
         document.getElementById('authOverlay').style.display = 'flex';
     }
@@ -217,7 +239,8 @@
     async function fetchInquiries() {
         try {
             const res = await fetch('/api/admin', {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
+                credentials: 'same-origin',
+                headers: {}
             });
             const result = await res.json();
             if (res.ok && result.success) {
@@ -285,7 +308,8 @@
 
         try {
             const res = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
+                credentials: 'same-origin',
+                headers: {}
             });
             const result = await res.json();
             if (res.ok && result.success) {
@@ -350,7 +374,8 @@
 
         try {
             const res = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${adminToken}` }
+                credentials: 'same-origin',
+                headers: {}
             });
             const result = await res.json();
             if (res.ok && result.success) {
@@ -419,8 +444,9 @@
         };
 
         const res = await fetch('/api/admin', {
+                credentials: 'same-origin',
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            headers: { 'Content-Type': 'application/json',},
             body: JSON.stringify(payload)
         });
         const result = await res.json();
@@ -435,8 +461,9 @@
     async function deleteSchedule(id) {
         if (!confirm('정말 이 일정을 삭제하시겠습니까?')) return;
         const res = await fetch('/api/admin', {
+                credentials: 'same-origin',
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            headers: { 'Content-Type': 'application/json',},
             body: JSON.stringify({ target: 'schedule', id })
         });
         const result = await res.json();
@@ -465,8 +492,9 @@
         document.body.removeChild(link);
 
         fetch('/api/admin', {
+                credentials: 'same-origin',
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            headers: { 'Content-Type': 'application/json',},
             body: JSON.stringify({ archive_old: true })
         });
     }
@@ -480,8 +508,9 @@
         };
 
         const res = await fetch('/api/admin', {
+                credentials: 'same-origin',
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            headers: { 'Content-Type': 'application/json',},
             body: JSON.stringify(payload)
         });
         const result = await res.json();
@@ -501,8 +530,9 @@
             referrer: document.getElementById(`ref-${id}`).value
         };
         const res = await fetch('/api/admin', {
+                credentials: 'same-origin',
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            headers: { 'Content-Type': 'application/json',},
             body: JSON.stringify(payload)
         });
         const result = await res.json();
@@ -513,8 +543,9 @@
     async function deleteInquiry(id) {
         if (!confirm('정말 삭제하시겠습니까?')) return;
         const res = await fetch('/api/admin', {
+                credentials: 'same-origin',
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+            headers: { 'Content-Type': 'application/json',},
             body: JSON.stringify({ id })
         });
         const result = await res.json();
@@ -629,11 +660,10 @@
 
             try {
                 const res = await fetch('/api/admin', {
+                credentials: 'same-origin',
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${adminToken}`
-                    },
+                        'Content-Type': 'application/json',},
                     body: JSON.stringify({ items })
                 });
                 const result = await res.json();
@@ -650,6 +680,24 @@
         };
         reader.readAsText(file, 'UTF-8');
     }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/auth/me', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            });
+            const result = await res.json().catch(() => ({}));
+            if (res.ok && result.authenticated) {
+                document.getElementById('authOverlay').style.display = 'none';
+                loadCurrentView();
+            }
+        } catch (error) {
+            console.error('Session restore failed:', error);
+        }
+    });
+
 </script>
 </body>
 </html>

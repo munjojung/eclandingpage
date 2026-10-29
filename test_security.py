@@ -81,6 +81,13 @@ def main():
     status, _, body = request(opener, base + "/api/admin", headers=headers)
     record("로그인 전 /api/admin 은 401", status == 401, f"HTTP {status}" if status else body)
 
+    status, _, body = request(
+        opener, base + "/api/generate-worksheet", "POST", headers,
+        {"topic": "Security test", "weekInfo": "test"}
+    )
+    record("로그인 전 학습지 생성 API는 401", status == 401,
+           f"HTTP {status}" if status else body)
+
     print("\n[2/7] 잘못된 비밀번호 거부 확인")
     status, _, body = request(
         opener, base + "/api/auth/login", "POST", headers,

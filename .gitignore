@@ -3,3 +3,6 @@ html백업/
 .env
 .DS_Store
 Thumbs.db
+.env.*
+__pycache__/
+*.pyc

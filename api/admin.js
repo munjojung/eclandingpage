@@ -1,25 +1,25 @@
 import { neon } from '@neondatabase/serverless';
-import { verifyAdminSession } from './_lib/admin-session.js';
+import { verifyAdminSession, requireSameOrigin } from './_lib/admin-session.js';
 
 export default async function handler(req, res) {
-  // 1. CORS / APP_ORIGIN 검증 (잘못된 Origin 요청은 403 차단)
-  const origin = req.headers.origin;
-  const appOrigin = process.env.APP_ORIGIN;
-  
-  if (req.method !== 'GET' && appOrigin && origin && origin !== appOrigin) {
-    return res.status(403).json({ success: false, error: '허용되지 않은 Origin 접근입니다.' });
+  if (!['GET', 'POST', 'PUT', 'DELETE'].includes(req.method)) {
+    res.setHeader('Allow', 'GET, POST, PUT, DELETE');
+    return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   }
 
-  // 2. 공통 모듈을 통한 세션 인증 검증
-  const sessionCheck = await verifyAdminSession(req);
-  if (!sessionCheck.isValid) {
-    return res.status(401).json({ success: false, error: sessionCheck.error });
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const originError = requireSameOrigin(req);
+    if (originError) return res.status(403).json({ success: false, error: originError });
   }
 
   try {
+    const authenticated = await verifyAdminSession(req);
+    if (!authenticated) {
+      return res.status(401).json({ success: false, error: '로그인이 필요하거나 세션이 만료되었습니다.' });
+    }
     const sql = neon(process.env.DATABASE_URL);
 
-    // --- 기존 관리자 비즈니스 로직 (GET, PUT, DELETE, POST) ---
+    // --- 5. 기존 관리자 API 비즈니스 로직 (GET, PUT, DELETE, POST) ---
     if (req.method === 'GET') {
       const type = req.query.type;
       const targetDate = req.query.date;

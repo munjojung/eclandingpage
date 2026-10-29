@@ -1,39 +1,19 @@
-import { neon } from '@neondatabase/serverless';
+import { clearSessionCookie, requireSameOrigin, revokeAdminSession } from '../_lib/admin-session.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   }
+  const originError = requireSameOrigin(req);
+  if (originError) return res.status(403).json({ success: false, error: originError });
 
-  const authHeader = req.headers.authorization;
-  let token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-
-  if (!token && req.headers.cookie) {
-    const cookies = req.headers.cookie.split(';');
-    for (const cookie of cookies) {
-      const [name, val] = cookie.trim().split('=');
-      if (name === 'admin_session') {
-        token = val;
-        break;
-      }
-    }
+  try {
+    await revokeAdminSession(req);
+    clearSessionCookie(res);
+    return res.status(200).json({ success: true, message: '로그아웃 되었습니다.' });
+  } catch (error) {
+    console.error('Logout Error:', error);
+    return res.status(500).json({ success: false, error: '로그아웃 처리 중 서버 오류가 발생했습니다.' });
   }
-
-  if (token) {
-    try {
-      const sql = neon(process.env.DATABASE_URL);
-      await sql`DELETE FROM esl_sessions WHERE token = ${token};`;
-    } catch (error) {
-      console.error('Logout DB Error:', error);
-    }
-  }
-
-  // 쿠키 만료 처리
-  res.setHeader(
-    'Set-Cookie',
-    'admin_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'
-  );
-
-  return res.status(200).json({ success: true, message: '로그아웃 되었습니다.' });
 }
