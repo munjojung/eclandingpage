@@ -1,35 +1,78 @@
-async function verifyAndDownload() {
-      const phoneInput = document.getElementById('modalPhoneInput').value.trim();
-      const errorDiv = document.getElementById('authErrorMsg');
-      errorDiv.style.display = 'none';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>English Community - 다운로드</title>
+    <style>
+        /* 간단한 모달 및 입력창 스타일 */
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f9f9f9; }
+        .modal { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #0070f3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%; }
+        button:hover { background: #0051a2; }
+        #authErrorMsg { color: red; font-size: 14px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
 
-      if (!phoneInput) {
-        errorDiv.innerText = '휴대폰 번호를 입력해 주세요.';
-        errorDiv.style.display = 'block';
-        return;
-      }
+    <div class="modal">
+        <h3>휴대폰 번호 인증</h3>
+        <p>다운로드를 위해 등록된 휴대폰 번호를 입력해 주세요.</p>
+        <input type="text" id="modalPhoneInput" placeholder="010-1234-5678">
+        <button onclick="verifyAndDownload()">인증 및 다운로드</button>
+        <div id="authErrorMsg"></div>
+    </div>
 
-      try {
-        const res = await fetch('/api/check', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: phoneInput })
-        });
-        
-        const result = await res.json();
+    <script>
+        const pendingDownloadId = "sample-pdf-id"; // 다운로드할 파일 ID
 
-        // 💡 P0 보안 개선: 서버 검증 실패 시 절대 다운로드를 진행하지 않고 차단
-        if (!res.ok || !result.success) {
-          throw new Error(result.error || '회원 인증에 실패했습니다.');
+        function showToast(message, type) {
+            alert(message); // 간단한 알림 대체
         }
 
-        closeAuthModal();
-        showToast('회원 인증이 완료되었습니다. PDF를 생성합니다.', 'success');
-        executePDFDownload(pendingDownloadId);
+        function closeAuthModal() {
+            // 모달 닫기 로직 (필요시 구현)
+        }
 
-      } catch (err) {
-        console.error('Verification Error:', err);
-        errorDiv.innerText = err.message || '등록되지 않은 휴대폰 번호입니다. 관리자에 문의하세요.';
-        errorDiv.style.display = 'block';
-      }
-    }
+        function executePDFDownload(id) {
+            alert("PDF 다운로드가 시작됩니다: " + id);
+            // 실제 다운로드 로직 연결
+        }
+
+        async function verifyAndDownload() {
+            const phoneInput = document.getElementById('modalPhoneInput').value.trim();
+            const errorDiv = document.getElementById('authErrorMsg');
+            errorDiv.style.display = 'none';
+
+            if (!phoneInput) {
+                errorDiv.innerText = '휴대폰 번호를 입력해 주세요.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phoneInput })
+                });
+                const result = await res.json();
+
+                // P0 보안 개선: 서버 검증 실패 시 절대 다운로드 진행 안 함
+                if (!res.ok || !result.success) {
+                    throw new Error(result.error || '회원 인증에 실패했습니다.');
+                }
+
+                closeAuthModal();
+                showToast('회원 인증이 완료되었습니다. PDF를 생성합니다.', 'success');
+                executePDFDownload(pendingDownloadId);
+
+            } catch (err) {
+                console.error('Verification Error:', err);
+                errorDiv.innerText = err.message || '등록되지 않은 휴대폰 번호입니다. 관리자에 문의하세요.';
+                errorDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
