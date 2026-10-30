@@ -611,7 +611,7 @@
       }
     }
 
-    // 📌 DB 응답 데이터 파싱 지원 히스토리 로드 함수
+    // 📌 💡 [자동 선택 기능 보완] 데이터 로드 직후 첫 번째 항목 자동 렌더링
     async function loadHistoryFromStorage() {
       try {
         const response = await fetch('/api/get-worksheets');
@@ -634,6 +634,7 @@
 
           renderHistoryList();
           
+          // 💡 핵심 수정: 데이터가 존재하면 사용자가 따로 클릭하지 않아도 가장 최근 항목(첫 번째) 자동 렌더링
           if (historyStore.length > 0) {
             renderWorksheet(historyStore[0]);
           } else {
