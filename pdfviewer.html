@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF 뷰어 - 날짜 및 순번 명명 규칙 연동</title>
+  <title>PDF 뷰어 - 원클릭 통합 자동 연동</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -13,52 +13,54 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
 
-  <!-- Top Control Bar -->
-  <header class="bg-white border-b border-slate-300 shadow-sm sticky top-0 z-50 py-3 w-full flex flex-col gap-2 px-4">
-    <div class="max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-100 pb-2">
+  <!-- Top Control Bar (한 줄 정렬 및 중앙 배치) -->
+  <header class="bg-white border-b border-slate-300 shadow-sm sticky top-0 z-50 py-3 px-4 w-full flex items-center justify-center">
+    <div class="flex flex-wrap items-center justify-center gap-3 text-xs max-w-7xl w-full">
       
-      <!-- 학습지 선택 셀렉트박스 (DB 연동) -->
-      <div class="flex items-center gap-2 overflow-hidden flex-1">
-        <i class="fa-solid fa-database text-sky-600 flex-shrink-0"></i>
-        <span class="font-semibold text-slate-700 flex-shrink-0">학습지 선택:</span>
-        <select id="worksheetSelect" onchange="onWorksheetSelected()" class="px-2 py-1 bg-slate-50 border border-slate-300 rounded-md text-slate-700 flex-1 font-medium text-xs truncate max-w-md">
+      <!-- 1. 학습지 선택 파트 -->
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <i class="fa-solid fa-database text-sky-600"></i>
+        <span class="font-semibold text-slate-700">학습지 선택:</span>
+        <select id="worksheetSelect" onchange="onWorksheetSelected()" class="px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-slate-700 font-medium text-xs max-w-xs truncate">
           <option value="">Vercel DB 목록 로딩 중...</option>
         </select>
       </div>
-      
-      <!-- 액션 버튼 그룹 -->
-      <div class="flex items-center gap-2 flex-shrink-0">
+
+      <!-- 2. 페이지 및 줌 제어 파트 -->
+      <div class="flex items-center gap-2 flex-shrink-0 bg-slate-50 border border-slate-300 px-2.5 py-1 rounded-md">
+        <div class="flex items-center gap-1.5">
+          <span class="font-medium text-slate-600">페이지</span>
+          <input type="number" id="pageNumInput" value="1" min="1" class="w-10 text-center border border-slate-300 rounded py-0.5 font-mono">
+          <span class="text-slate-500 mr-1">/ <span id="pageCount">0</span></span>
+          <button id="prevPage" class="px-2 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition">
+            <i class="fa-solid fa-caret-left"></i> 이전
+          </button>
+          <button id="nextPage" class="px-2 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition">
+            다음 <i class="fa-solid fa-caret-right"></i>
+          </button>
+        </div>
+
+        <div class="h-4 w-px bg-slate-300 mx-1"></div>
+
+        <div class="flex items-center gap-1">
+          <button id="zoomOut" class="w-6 h-6 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 font-bold transition">-</button>
+          <span id="zoomLevel" class="w-10 text-center font-mono font-medium text-slate-600">100%</span>
+          <button id="zoomIn" class="w-6 h-6 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 font-bold transition">+</button>
+          <button id="zoomToggleBtn" class="ml-1 px-2 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition font-medium">폭 맞춤</button>
+        </div>
+      </div>
+
+      <!-- 3. 선택 파일 열기 및 폴더 변경 파트 -->
+      <div class="flex items-center gap-1.5 flex-shrink-0">
         <button onclick="openSelectedPdfFile()" class="bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5">
           <i class="fa-solid fa-bolt"></i>
           <span>선택 파일 열기</span>
         </button>
-        <button onclick="resetFolderHandle()" title="저장된 폴더 권한 초기화" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg transition">
+        <button onclick="resetFolderHandle()" title="저장된 폴더 권한 초기화" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg transition text-xs">
           <i class="fa-solid fa-folder-open"></i> 폴더변경
         </button>
       </div>
-    </div>
 
-    <!-- Page & Zoom Controls -->
-    <div class="max-w-6xl mx-auto w-full flex items-center justify-center gap-3 text-xs flex-nowrap overflow-x-auto pt-1">
-      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 px-2.5 py-1.5 rounded flex-shrink-0">
-        <span class="font-medium text-slate-600 mr-0.5">페이지</span>
-        <input type="number" id="pageNumInput" value="1" min="1" class="w-12 text-center border border-slate-300 rounded py-0.5 font-mono">
-        <span class="text-slate-500 mr-2">/ <span id="pageCount">0</span></span>
-        
-        <button id="prevPage" class="px-2 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition">
-          <i class="fa-solid fa-caret-left mr-1"></i>이전
-        </button>
-        <button id="nextPage" class="px-2 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition">
-          다음<i class="fa-solid fa-caret-right ml-1"></i>
-        </button>
-      </div>
-
-      <div class="flex items-center gap-1 bg-slate-50 border border-slate-300 px-2 py-1.5 rounded flex-shrink-0">
-        <button id="zoomOut" class="w-7 h-7 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 font-bold transition">-</button>
-        <span id="zoomLevel" class="w-12 text-center font-mono font-medium text-slate-600">100%</span>
-        <button id="zoomIn" class="w-7 h-7 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 font-bold transition">+</button>
-        <button id="zoomToggleBtn" class="ml-1 px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition font-medium">폭 맞춤</button>
-      </div>
     </div>
   </header>
 
@@ -217,12 +219,23 @@
         let targetFileName = selectedWorksheet.file_name ? selectedWorksheet.file_name.trim() : '';
         let targetFileHandle = null;
 
-        // DB에 기록된 정확한 file_name으로 폴더 내 파일 직접 획득
         if (targetFileName) {
           try {
             targetFileHandle = await dirHandle.getFileHandle(targetFileName);
           } catch (e) {
             console.warn('Exact file_name not found:', targetFileName);
+          }
+        }
+
+        if (!targetFileHandle) {
+          let dateOnly = (selectedWorksheet.target_date || '').replace(/-/g, '');
+          for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
+              if (dateOnly && entry.name.includes(dateOnly)) {
+                targetFileHandle = entry;
+                break;
+              }
+            }
           }
         }
 
