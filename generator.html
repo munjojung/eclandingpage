@@ -173,12 +173,12 @@
         </div>
       </div>
 
-      <!-- ARCHIVE & HISTORY MANAGER -->
+      <!-- ARCHIVE & HISTORY MANAGER (클릭 시 폴더 팝업 오픈) -->
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex-1 flex flex-col min-h-[300px]">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="font-bold text-navy-900 text-sm flex items-center gap-2 font-jakarta">
-            <i class="fa-solid fa-folder-closed text-slate-500"></i>
-            생성 히스토리 보관함
+        <div class="flex items-center justify-between mb-3 cursor-pointer group" onclick="openFolderModal()" title="클릭하여 파일 폴더 팝업 열기">
+          <h3 class="font-bold text-navy-900 text-sm flex items-center gap-2 font-jakarta group-hover:text-skybrand-600 transition">
+            <i class="fa-solid fa-folder-open text-amber-500"></i>
+            생성 히스토리 보관함 <i class="fa-solid fa-external-link-alt text-[10px] text-slate-400"></i>
           </h3>
           <span id="historyCount" class="text-xs font-semibold bg-skybrand-50 text-skybrand-700 px-2 py-0.5 rounded-full">0개</span>
         </div>
@@ -238,7 +238,7 @@
                 <p class="text-xs font-semibold text-skybrand-600 font-jakarta">Let's talk about <span id="p1TopicText">Travel & Cultures</span></p>
               </div>
               <div class="text-right flex flex-col items-end">
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta mb-1" id="p1WeekText">2026년 10월 29일 목요일</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta mb-1" id="p1WeekText">2026년 10월 30일 금요일</div>
                 <div class="text-xl font-black font-jakarta text-navy-900 tracking-wider">English Community</div>
                 <div class="text-[10px] text-skybrand-600 font-medium">Speak Freely, Connect Deeply.</div>
               </div>
@@ -265,7 +265,7 @@
                 <h2 class="text-xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p2TopicText">Travel & Cultures</h2>
               </div>
               <div class="text-right flex flex-col items-end">
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta mb-1" id="p2WeekText">2026년 10월 29일 목요일</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta mb-1" id="p2WeekText">2026년 10월 30일 금요일</div>
                 <div class="text-xl font-black font-jakarta text-navy-900 tracking-wider">English Community</div>
                 <div class="text-[10px] text-skybrand-600 font-medium">Speak Freely, Connect Deeply.</div>
               </div>
@@ -305,6 +305,33 @@
 
       </div>
     </main>
+  </div>
+
+  <!-- FILE FOLDER MANAGER MODAL (파일 폴더 팝업 창) -->
+  <div id="folderModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-200">
+        <h3 class="font-bold text-navy-900 text-lg flex items-center gap-2 font-jakarta">
+          <i class="fa-solid fa-folder-open text-amber-500 text-xl"></i>
+          학습지 파일 폴더 보관함 (Virtual Storage)
+        </h3>
+        <button onclick="closeFolderModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      
+      <p class="text-xs text-slate-500 py-2">
+        브라우저 보관함에 저장된 모든 학습지 가상 폴더입니다. 항목을 클릭하여 불러오거나 JSON 파일로 다운로드할 수 있습니다.
+      </p>
+
+      <!-- Folder Grid View -->
+      <div id="folderModalContent" class="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 pr-1">
+        <!-- Dynamically populated folder cards -->
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-200">
+        <span id="folderModalCount" class="text-xs text-slate-500 font-medium">총 0개 파일</span>
+        <button onclick="closeFolderModal()" class="px-4 py-2 text-xs bg-navy-900 hover:bg-slate-800 text-white font-medium rounded-lg shadow-sm">닫기</button>
+      </div>
+    </div>
   </div>
 
   <!-- API KEY MODAL -->
@@ -348,7 +375,6 @@
       return `${year}년 ${month}월 ${day}일 ${days[d.getDay()]}`;
     }
 
-    // PDF와 동일한 10문항 완벽 구성 샘플 데이터
     const SAMPLE_DATA = {
       id: "sample-travel-01",
       date: new Date().toISOString(),
@@ -523,7 +549,6 @@
       document.getElementById('p1TopicText').innerText = p1.subTopic || data.topic || '';
       document.getElementById('p2TopicText').innerText = p2.topic || data.topic || '';
 
-      // Page 1: 10 Questions rendering
       const dqContainer = document.getElementById('dqQuestionsContainer');
       dqContainer.innerHTML = '';
       (p1.questions || []).forEach((qObj) => {
@@ -545,7 +570,6 @@
         `;
       });
 
-      // Page 2: Expressions
       const todaysContainer = document.getElementById('todaysExprContainer');
       todaysContainer.innerHTML = '';
       (p2.todaysExpressions || []).forEach((item, idx) => {
@@ -574,7 +598,6 @@
         `;
       });
 
-      // Story Text
       let rawStory = p2.storyText || '';
       let highlightedStory = rawStory.replace(/#([^#]+)#/g, '<span class="highlight-expr">$1</span>');
       document.getElementById('essayStoryContainer').innerHTML = `
@@ -584,7 +607,6 @@
         <p class="leading-relaxed font-serif text-slate-800">${highlightedStory}</p>
       `;
 
-      // Page 2: 10 Essay Discussion Questions
       const essayQContainer = document.getElementById('essayQuestionsContainer');
       essayQContainer.innerHTML = '';
       (p2.questions || []).forEach((qObj) => {
@@ -603,7 +625,6 @@
       });
     }
 
-    // Gemini API Direct Call with Strict 10-Question Prompt Enforcement
     async function generateWorksheetWithGemini() {
       const apiKey = localStorage.getItem('gemini_api_key') || '';
       if (!apiKey) {
@@ -752,6 +773,7 @@ Output ONLY raw JSON matching this exact structure without any markdown fencing 
       if (found) {
         renderWorksheet(found);
         renderHistoryList();
+        closeFolderModal();
         showToast(`'${found.topic}' 학습지를 불러왔습니다.`, 'info');
       }
     }
@@ -760,6 +782,7 @@ Output ONLY raw JSON matching this exact structure without any markdown fencing 
       historyStore = historyStore.filter(i => i.id !== id);
       localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
       renderHistoryList();
+      renderFolderModalList();
       showToast('삭제되었습니다.', 'info');
     }
 
@@ -768,9 +791,66 @@ Output ONLY raw JSON matching this exact structure without any markdown fencing 
       renderHistoryList(input ? input.value : '');
     }
 
+    // 파일 폴더 모달 열기/닫기 함수
+    function openFolderModal() {
+      renderFolderModalList();
+      document.getElementById('folderModal').classList.remove('hidden');
+    }
+
+    function closeFolderModal() {
+      document.getElementById('folderModal').classList.add('hidden');
+    }
+
+    function renderFolderModalList() {
+      const contentEl = document.getElementById('folderModalContent');
+      const countEl = document.getElementById('folderModalCount');
+      if (!contentEl) return;
+      contentEl.innerHTML = '';
+
+      if (countEl) countEl.innerText = `총 ${historyStore.length}개 파일`;
+
+      if (historyStore.length === 0) {
+        contentEl.innerHTML = `<div class="col-span-2 text-xs text-slate-400 text-center py-10">저장된 가상 폴더 파일이 없습니다.</div>`;
+        return;
+      }
+
+      historyStore.forEach((item) => {
+        const dateStr = new Date(item.date || Date.now()).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+        contentEl.innerHTML += `
+          <div class="p-3 bg-slate-50 hover:bg-skybrand-50 border border-slate-200 rounded-xl flex items-center justify-between cursor-pointer transition group" onclick="selectHistoryItem('${item.id}')">
+            <div class="flex items-center space-x-3 truncate">
+              <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0 text-base font-bold">
+                <i class="fa-solid fa-file-lines"></i>
+              </div>
+              <div class="truncate">
+                <div class="font-bold text-navy-900 text-xs truncate group-hover:text-skybrand-700">${item.topic}</div>
+                <div class="text-[10px] text-slate-400">${item.weekInfo}</div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1">
+              <button onclick="event.stopPropagation(); downloadSingleJSON('${item.id}')" class="p-1.5 text-slate-400 hover:text-skybrand-600" title="JSON 다운로드">
+                <i class="fa-solid fa-download text-xs"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function downloadSingleJSON(id) {
+      const found = historyStore.find(i => i.id === id);
+      if (!found) return;
+      const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(found, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", jsonStr);
+      dlAnchor.setAttribute("download", `EnglishCommunity_${found.topic}_${Date.now()}.json`);
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+      showToast('학습지 파일이 다운로드되었습니다.', 'success');
+    }
+
     function toggleAutoScheduler() {
-      const card = document.getElementById('schedulerCard');
-      const btn = document.getElementById('schedulerToggleBtn');
       showToast('자동 생성 기능이 준비되었습니다.', 'info');
     }
 
