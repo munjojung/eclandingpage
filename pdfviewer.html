@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF 뷰어 - Vercel DB & manifest.json 자동 연동</title>
+  <title>PDF 뷰어 - 원클릭 통합 자동 연동</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -23,11 +23,14 @@
       </div>
       
       <div class="flex items-center gap-2 flex-shrink-0">
-        <button onclick="openMatchedPdfFile()" class="bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5">
-          <i class="fa-solid fa-file-arrow-down"></i>
-          <span>DB 연동 최신 파일 열기</span>
+        <button onclick="openMatchedPdfFile()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5 text-sm">
+          <i class="fa-solid fa-bolt"></i>
+          <span>원클릭 최신 파일 열기</span>
         </button>
-        <span id="fileNameDisplay" class="text-slate-500 italic max-w-[200px] truncate">DB 목록 로딩 중...</span>
+        <button onclick="resetFolderHandle()" title="저장된 폴더 권한 초기화 및 재선택" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2.5 py-2 rounded-lg transition text-xs">
+          <i class="fa-solid fa-folder-open"></i> 폴더변경
+        </button>
+        <span id="fileNameDisplay" class="text-slate-500 italic max-w-[180px] truncate">DB 로딩 중...</span>
       </div>
     </div>
 
@@ -62,7 +65,7 @@
       
       <div id="loadingOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-20">
         <i class="fa-solid fa-spinner fa-spin text-sky-600 text-3xl"></i>
-        <p class="text-xs text-slate-600 font-medium" id="loadingText">Vercel DB 목록 정보를 불러오는 중입니다...</p>
+        <p class="text-xs text-slate-600 font-medium" id="loadingText">Vercel DB 및 폴더 연동 준비 중...</p>
       </div>
     </div>
   </main>
@@ -86,6 +89,41 @@
     const zoomToggleBtn = document.getElementById('zoomToggleBtn');
     const defaultPathDisplay = document.getElementById('defaultPathDisplay');
 
+    // IndexedDB를 활용한 디렉토리 핸들 영구 저장 유틸리티
+    const DB_NAME = 'PdfViewerDB';
+    const STORE_NAME = 'handles';
+    const HANDLE_KEY = 'private_pdfs_dir';
+
+    function saveDirHandle(handle) {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME);
+        req.onsuccess = e => {
+          const db = e.target.result;
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).put(handle, HANDLE_KEY);
+          tx.oncomplete = () => resolve();
+          tx.onerror = err => reject(err);
+        };
+        req.onerror = err => reject(err);
+      });
+    }
+
+    function getSavedDirHandle() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME);
+        req.onsuccess = e => {
+          const db = e.target.result;
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const getReq = tx.objectStore(STORE_NAME).get(HANDLE_KEY);
+          getReq.onsuccess = () => resolve(getReq.result);
+          getReq.onerror = err => reject(err);
+        };
+        req.onerror = err => reject(err);
+      });
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
       const savedPath = localStorage.getItem('ec_download_path');
       if (savedPath) defaultPathDisplay.value = savedPath;
@@ -100,8 +138,8 @@
         
         if (res.ok && result.success && Array.isArray(result.data) && result.data.length > 0) {
           dbWorksheets = result.data;
-          fileNameDisplay.textContent = `DB 연결됨 (${dbWorksheets.length}개 항목)`;
-          loadingText.textContent = "DB 로드 완료. [DB 연동 최신 파일 열기] 버튼을 클릭하세요.";
+          fileNameDisplay.textContent = `DB 연동 완료 (${dbWorksheets.length}개)`;
+          loadingText.textContent = "준비 완료. [원클릭 최신 파일 열기] 버튼을 누르세요.";
           loadingOverlay.classList.add('hidden');
           return;
         }
@@ -111,6 +149,20 @@
 
       fileNameDisplay.textContent = 'DB 연동 실패';
       loadingText.innerHTML = '<span class="text-rose-500">DB 데이터를 불러오지 못했습니다.</span>';
+    }
+
+    async function resetFolderHandle() {
+      try {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onsuccess = e => {
+          const db = e.target.result;
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).delete(HANDLE_KEY);
+          alert('저장된 폴더 권한이 초기화되었습니다. [원클릭 최신 파일 열기]를 누르면 폴더를 다시 지정하실 수 있습니다.');
+        };
+      } catch (e) {
+        console.error(e);
+      }
     }
 
     async function openMatchedPdfFile() {
@@ -126,11 +178,29 @@
         }
 
         loadingOverlay.classList.remove('hidden');
-        loadingText.textContent = '지정 폴더(private_pdfs)에 접근 중입니다...';
+        loadingText.textContent = '폴더 접근 권한 확인 중...';
 
-        const dirHandle = await window.showDirectoryPicker();
+        let dirHandle = await getSavedDirHandle();
+
+        if (dirHandle) {
+          const perm = await dirHandle.queryPermission({ mode: 'read' });
+          if (perm !== 'granted') {
+            const reqPerm = await dirHandle.requestPermission({ mode: 'read' });
+            if (reqPerm !== 'granted') {
+              dirHandle = null;
+            }
+          }
+        }
+
+        // 저장된 권한이 없거나 거부된 경우에만 폴더 선택 창 오픈
+        if (!dirHandle) {
+          loadingText.textContent = '지정 폴더(private_pdfs)를 선택해 주세요...';
+          dirHandle = await window.showDirectoryPicker();
+          await saveDirHandle(dirHandle);
+        }
+
+        loadingText.textContent = '최신 학습지 파일 매칭 중...';
         
-        // 1. manifest.json 읽기 시도
         let manifestData = null;
         try {
           const manifestHandle = await dirHandle.getFileHandle('manifest.json');
@@ -141,10 +211,9 @@
           console.warn('manifest.json 로드 불가 또는 없음:', e);
         }
 
-        const latestDbItem = dbWorksheets[0]; // 가장 최근 레코드 (id: 3)
+        const latestDbItem = dbWorksheets[0]; 
         let targetFileName = latestDbItem.file_name || '';
 
-        // created_at 타임스탬프 기반 파싱 (예: 2026-10-30T15:19:00 -> 20261030_1519)
         let timeStamp = '';
         if (latestDbItem.created_at) {
           const d = new Date(latestDbItem.created_at);
@@ -160,7 +229,6 @@
 
         let targetFileHandle = null;
 
-        // 2. manifest.json이 존재할 경우 fileName 매칭
         if (manifestData && Array.isArray(manifestData.pdfs)) {
           const matchedPdf = manifestData.pdfs.find(p => 
             p.fileName === targetFileName || (timeStamp && p.fileName.includes(timeStamp))
@@ -175,7 +243,6 @@
           }
         }
 
-        // 3. manifest 매칭 실패 시 폴더 직접 검색
         if (!targetFileHandle) {
           for await (const entry of dirHandle.values()) {
             if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
@@ -187,7 +254,6 @@
           }
         }
 
-        // 4. Fallback: 첫 번째 PDF
         if (!targetFileHandle) {
           for await (const entry of dirHandle.values()) {
             if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
