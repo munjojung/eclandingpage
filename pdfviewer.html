@@ -3,12 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF 뷰어 - Vercel DB 연동 및 지정 폴더 자동 열기</title>
-  <!-- Tailwind CSS CDN -->
+  <title>PDF 뷰어 - Vercel DB & manifest.json 자동 연동</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- PDF.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -18,8 +15,6 @@
 
   <!-- Top Control Bar -->
   <header class="bg-white border-b border-slate-300 shadow-sm sticky top-0 z-50 py-3 w-full flex flex-col gap-2 px-4">
-    
-    <!-- Row 1: Vercel DB 연동 및 폴더 자동 열기 -->
     <div class="max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-100 pb-2">
       <div class="flex items-center gap-2 overflow-hidden flex-1">
         <i class="fa-solid fa-database text-sky-600 flex-shrink-0"></i>
@@ -28,15 +23,15 @@
       </div>
       
       <div class="flex items-center gap-2 flex-shrink-0">
-        <button onclick="openFirstFileFromDbFolder()" class="bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5">
+        <button onclick="openMatchedPdfFile()" class="bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5">
           <i class="fa-solid fa-file-arrow-down"></i>
-          <span>DB 연동 첫 번째 파일 열기</span>
+          <span>DB 연동 최신 파일 열기</span>
         </button>
-        <span id="fileNameDisplay" class="text-slate-500 italic max-w-[180px] truncate">DB 목록 로딩 중...</span>
+        <span id="fileNameDisplay" class="text-slate-500 italic max-w-[200px] truncate">DB 목록 로딩 중...</span>
       </div>
     </div>
 
-    <!-- Row 2: 페이지 및 줌 컨트롤 -->
+    <!-- Page & Zoom Controls -->
     <div class="max-w-6xl mx-auto w-full flex items-center justify-center gap-3 text-xs flex-nowrap overflow-x-auto pt-1">
       <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 px-2.5 py-1.5 rounded flex-shrink-0">
         <span class="font-medium text-slate-600 mr-0.5">페이지</span>
@@ -60,14 +55,14 @@
     </div>
   </header>
 
-  <!-- Main Viewer Canvas Area -->
+  <!-- Main Viewer Area -->
   <main class="flex-1 w-full p-4 flex flex-col items-center justify-start overflow-auto">
     <div id="pdfContainer" class="bg-white border border-slate-300 shadow-md rounded p-4 relative flex items-center justify-center min-h-[700px] w-full max-w-4xl">
       <canvas id="pdfCanvas" class="shadow"></canvas>
       
       <div id="loadingOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-20">
         <i class="fa-solid fa-spinner fa-spin text-sky-600 text-3xl"></i>
-        <p class="text-xs text-slate-600 font-medium" id="loadingText">Vercel DB에서 파일 목록을 불러오는 중입니다...</p>
+        <p class="text-xs text-slate-600 font-medium" id="loadingText">Vercel DB 목록 정보를 불러오는 중입니다...</p>
       </div>
     </div>
   </main>
@@ -78,7 +73,7 @@
     let pageRendering = false;
     let pageNumPending = null;
     let scale = 1.0;
-    let dbFileList = []; 
+    let dbWorksheets = []; 
     
     const canvas = document.getElementById('pdfCanvas');
     const ctx = canvas.getContext('2d');
@@ -93,57 +88,36 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
       const savedPath = localStorage.getItem('ec_download_path');
-      if (savedPath) {
-        defaultPathDisplay.value = savedPath;
-      }
+      if (savedPath) defaultPathDisplay.value = savedPath;
 
-      await fetchDbFiles();
+      await fetchDbWorksheets();
     });
 
-    async function fetchDbFiles() {
+    async function fetchDbWorksheets() {
       try {
-        // 📌 올바른 API 엔드포인트 지정 (/api/get-worksheets)
-        const res = await fetch('/api/get-worksheets');[cite: 16]
+        const res = await fetch('/api/get-worksheets');
         const result = await res.json();
         
-        if (res.ok && result.success && result.data) {
-          dbFileList = Array.isArray(result.data) ? result.data : [];
-          if (dbFileList.length > 0) {
-            fileNameDisplay.textContent = "DB 연동됨 (" + dbFileList.length + "개)";
-            loadingText.textContent = "DB 목록 로드 완료. [DB 연동 첫 번째 파일 열기] 버튼을 눌러주세요.";
-            loadingOverlay.classList.add('hidden');
-            return;
-          }
+        if (res.ok && result.success && Array.isArray(result.data) && result.data.length > 0) {
+          dbWorksheets = result.data;
+          fileNameDisplay.textContent = `DB 연결됨 (${dbWorksheets.length}개 항목)`;
+          loadingText.textContent = "DB 로드 완료. [DB 연동 최신 파일 열기] 버튼을 클릭하세요.";
+          loadingOverlay.classList.add('hidden');
+          return;
         }
       } catch (err) {
-        console.warn('DB API fetch fallback to localStorage:', err);
+        console.warn('DB API fetch error:', err);
       }
 
-      const stored = localStorage.getItem('ec_worksheet_history');
-      if (stored) {
-        try {
-          dbFileList = JSON.parse(stored);
-        } catch(e) { dbFileList = []; }
-      }
-
-      if (dbFileList.length > 0) {
-        fileNameDisplay.textContent = "캐시 연동됨 (" + dbFileList.length + "개)";
-        loadingText.textContent = "목록 로드 완료. [DB 연동 첫 번째 파일 열기] 버튼을 눌러주세요.";
-        loadingOverlay.classList.add('hidden');
-      } else {
-        fileNameDisplay.textContent = '등록된 항목 없음';
-        loadingText.innerHTML = '<span class="text-rose-500">Vercel DB에 등록된 항목이 없습니다.</span>';
-      }
+      fileNameDisplay.textContent = 'DB 연동 실패';
+      loadingText.innerHTML = '<span class="text-rose-500">DB 데이터를 불러오지 못했습니다.</span>';
     }
 
-    async function openFirstFileFromDbFolder() {
-      if (dbFileList.length === 0) {
-        alert('DB에서 불러온 파일 목록이 없습니다.');
+    async function openMatchedPdfFile() {
+      if (dbWorksheets.length === 0) {
+        alert('DB 항목이 없습니다.');
         return;
       }
-
-      const firstItem = dbFileList[0];
-      console.log('DB 첫 번째 항목:', firstItem);
 
       try {
         if (!window.showDirectoryPicker) {
@@ -152,20 +126,79 @@
         }
 
         loadingOverlay.classList.remove('hidden');
-        loadingText.textContent = '지정 폴더(private_pdfs)에 접근합니다...';
+        loadingText.textContent = '지정 폴더(private_pdfs)에 접근 중입니다...';
 
         const dirHandle = await window.showDirectoryPicker();
+        
+        // 1. manifest.json 읽기 시도
+        let manifestData = null;
+        try {
+          const manifestHandle = await dirHandle.getFileHandle('manifest.json');
+          const manifestFile = await manifestHandle.getFile();
+          const manifestText = await manifestFile.text();
+          manifestData = JSON.parse(manifestText);
+        } catch (e) {
+          console.warn('manifest.json 로드 불가 또는 없음:', e);
+        }
+
+        const latestDbItem = dbWorksheets[0]; // 가장 최근 레코드 (id: 3)
+        let targetFileName = latestDbItem.file_name || '';
+
+        // created_at 타임스탬프 기반 파싱 (예: 2026-10-30T15:19:00 -> 20261030_1519)
+        let timeStamp = '';
+        if (latestDbItem.created_at) {
+          const d = new Date(latestDbItem.created_at);
+          if (!isNaN(d.getTime())) {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            timeStamp = `${yyyy}${mm}${dd}_${hh}${min}`;
+          }
+        }
+
         let targetFileHandle = null;
 
-        for await (const entry of dirHandle.values()) {
-          if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
-            targetFileHandle = entry;
-            break;
+        // 2. manifest.json이 존재할 경우 fileName 매칭
+        if (manifestData && Array.isArray(manifestData.pdfs)) {
+          const matchedPdf = manifestData.pdfs.find(p => 
+            p.fileName === targetFileName || (timeStamp && p.fileName.includes(timeStamp))
+          ) || manifestData.pdfs[0];
+
+          if (matchedPdf) {
+            try {
+              targetFileHandle = await dirHandle.getFileHandle(matchedPdf.fileName);
+            } catch (err) {
+              console.warn('manifest 파일 탐색 실패:', err);
+            }
+          }
+        }
+
+        // 3. manifest 매칭 실패 시 폴더 직접 검색
+        if (!targetFileHandle) {
+          for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
+              if (timeStamp && entry.name.includes(timeStamp)) {
+                targetFileHandle = entry;
+                break;
+              }
+            }
+          }
+        }
+
+        // 4. Fallback: 첫 번째 PDF
+        if (!targetFileHandle) {
+          for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
+              targetFileHandle = entry;
+              break;
+            }
           }
         }
 
         if (!targetFileHandle) {
-          alert('선택하신 폴더 내에 PDF 파일이 존재하지 않습니다.');
+          alert('일치하는 PDF 파일을 찾을 수 없습니다.');
           loadingOverlay.classList.add('hidden');
           return;
         }
@@ -173,13 +206,13 @@
         const file = await targetFileHandle.getFile();
         fileNameDisplay.textContent = file.name;
         fileNameDisplay.title = file.name;
-        loadingText.textContent = '파일(' + file.name + ')을 읽어오는 중입니다...';
+        loadingText.textContent = `파일(${file.name}) 로딩 중...`;
 
         const arrayBuffer = await file.arrayBuffer();
         loadPdfData(new Uint8Array(arrayBuffer));
 
       } catch (err) {
-        console.warn('Directory picker cancelled or error:', err);
+        console.warn('Directory picker cancelled/error:', err);
         loadingOverlay.classList.add('hidden');
       }
     }
