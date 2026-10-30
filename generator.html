@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>English Community Daily Worksheet Generator - 보안 강화 통합 버전</title>
+  <title>English Community Daily Worksheet Generator - 통합 API 및 보안 강화 버전</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,7 +51,7 @@
             English Community
             <span class="bg-skybrand-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase">Daily Worksheet</span>
           </h1>
-          <p class="text-xs text-sky-200/70">gemini-3.8-flash 및 관리자 보안 인증 강화 버전</p>
+          <p class="text-xs text-sky-200/70">gemini-3.8-flash 및 통합 API 보안 버전</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -60,7 +60,7 @@
           <span>비밀번호 관리</span>
         </button>
         <div class="text-xs text-emerald-400 font-medium flex items-center gap-1.5 bg-emerald-950/50 px-3 py-1.5 rounded-lg border border-emerald-800/50">
-          <i class="fa-solid fa-shield-halved"></i> Vercel 보안 연동됨
+          <i class="fa-solid fa-shield-halved"></i> Vercel API 연동됨
         </div>
       </div>
     </div>
@@ -419,7 +419,6 @@
       });
     }
 
-    // 🔒 비밀번호 확인 후 생성 트리거
     function startGenerationWithAuthCheck() {
       const savedPw = sessionStorage.getItem('admin_pwd') || '';
       if (!savedPw) {
@@ -449,6 +448,7 @@
       generateWorksheetWithVercelAPI(pwInput);
     }
 
+    // 📌 통합 API 경로(/api/worksheet) 및 action: 'generate' 적용
     async function generateWorksheetWithVercelAPI(pwd) {
       const adminPassword = pwd || sessionStorage.getItem('admin_pwd') || '';
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Travel & Cultures';
@@ -463,10 +463,11 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Vercel AI 생성 중 (${fileName})...</span>`;
 
       try {
-        const response = await fetch('/api/generate-worksheet', {
+        const response = await fetch('/api/worksheet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            action: 'generate',
             topic: customTopic,
             weekInfo: weekInfo,
             target_date: targetDate,
@@ -625,14 +626,19 @@
       });
     }
 
+    // 📌 통합 API 경로(/api/worksheet) 및 action: 'delete' 적용
     async function deleteHistoryItem(id, fileName) {
       if (!confirm('정말 삭제하시겠습니까? Vercel DB에서도 함께 삭제됩니다.')) return;
 
       try {
-        await fetch('/api/delete-worksheet', {
+        await fetch('/api/worksheet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, file_name: fileName })
+          body: JSON.stringify({
+            action: 'delete',
+            id: id,
+            file_name: fileName
+          })
         });
       } catch (err) {
         console.warn('DB 삭제 요청 처리 중 오류가 발생했습니다.', err);
