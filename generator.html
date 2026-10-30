@@ -4,11 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>English Community Daily Worksheet Generator - 원클릭 통합</title>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Google Fonts for Worksheet styling -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
@@ -45,7 +42,6 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
 
-  <!-- TOP HEADER / NAV BAR -->
   <header class="bg-navy-900 text-white shadow-lg sticky top-0 z-50 no-print border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
@@ -55,28 +51,20 @@
             English Community
             <span class="bg-skybrand-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase">Daily Worksheet</span>
           </h1>
-          <p class="text-xs text-sky-200/70">날짜 + 순번 명명 규칙 자동 연동 버전</p>
+          <p class="text-xs text-sky-200/70">gemini-3.8-flash 및 원클릭 폴더 저장 통합 버전</p>
         </div>
       </div>
-
-      <div class="flex items-center space-x-3">
-        <button onclick="openApiKeyModal()" class="px-3 py-1.5 bg-navy-800 hover:bg-slate-800 text-xs text-slate-200 rounded-lg flex items-center space-x-2 border border-slate-700 transition">
-          <i class="fa-solid fa-key text-amber-400"></i>
-          <span>Gemini API 키 설정</span>
-        </button>
+      <div class="text-xs text-emerald-400 font-medium flex items-center gap-1.5 bg-emerald-950/50 px-3 py-1.5 rounded-lg border border-emerald-800/50">
+        <i class="fa-solid fa-shield-halved"></i> Vercel 환경변수 연동됨
       </div>
     </div>
   </header>
 
-  <!-- MAIN APP CONTAINER -->
   <div class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-6 gap-6">
-
-    <!-- SIDEBAR -->
     <aside class="w-full md:w-80 flex flex-col gap-6 no-print flex-shrink-0">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col gap-4">
         <h2 class="font-bold text-navy-900 text-base flex items-center gap-2 font-jakarta">
-          <i class="fa-solid fa-compass text-skybrand-600"></i>
-          주제별 학습지 생성 (10문항)
+          <i class="fa-solid fa-compass text-skybrand-600"></i> 주제별 학습지 생성 (10문항)
         </h2>
 
         <div>
@@ -99,9 +87,9 @@
         </div>
 
         <div class="flex flex-col gap-2 pt-2">
-          <button id="btnGenerate" onclick="generateWorksheetWithGemini()" class="w-full py-2.5 bg-gradient-to-r from-navy-900 to-skybrand-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 text-sm">
+          <button id="btnGenerate" onclick="generateWorksheetWithVercelAPI()" class="w-full py-2.5 bg-gradient-to-r from-navy-900 to-skybrand-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 text-sm">
             <i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i>
-            <span>Gemini AI 학습지 생성</span>
+            <span>Vercel AI 학습지 생성</span>
           </button>
           <button onclick="loadSampleData()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg transition flex items-center justify-center space-x-1">
             <i class="fa-solid fa-file-lines text-slate-500"></i>
@@ -110,7 +98,6 @@
         </div>
       </div>
 
-      <!-- HISTORY -->
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex-1 flex flex-col min-h-[300px]">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-bold text-navy-900 text-sm flex items-center gap-2 font-jakarta">
@@ -122,7 +109,6 @@
       </div>
     </aside>
 
-    <!-- RIGHT MAIN CONTENT -->
     <main class="flex-1 flex flex-col gap-4">
       <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 no-print">
         <div class="flex items-center bg-slate-100 p-1 rounded-xl">
@@ -145,9 +131,7 @@
         </div>
       </div>
 
-      <!-- PRINTABLE PREVIEW -->
       <div id="printableContent" class="print-container space-y-8">
-        <!-- PAGE 1 -->
         <div id="page1View" class="worksheet-page bg-white p-8 md:p-10 rounded-2xl shadow-md border border-slate-200 text-slate-900 mx-auto max-w-[210mm] min-h-[297mm] flex flex-col justify-between relative">
           <div>
             <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
@@ -171,7 +155,6 @@
 
         <div class="page-break"></div>
 
-        <!-- PAGE 2 -->
         <div id="page2View" class="worksheet-page bg-white p-8 md:p-10 rounded-2xl shadow-md border border-slate-200 text-slate-900 mx-auto max-w-[210mm] min-h-[297mm] flex flex-col justify-between relative">
           <div>
             <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
@@ -213,30 +196,11 @@
     </main>
   </div>
 
-  <!-- API KEY MODAL -->
-  <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="font-bold text-navy-900 text-lg flex items-center gap-2 font-jakarta">
-          <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 설정
-        </h3>
-        <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-      </div>
-      <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
-      <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeApiKeyModal()" class="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">취소</button>
-        <button onclick="saveApiKey()" class="px-4 py-2 text-xs bg-navy-900 text-white rounded-lg">저장하기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST -->
   <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs no-print">
     <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
     <span id="toastMsg">알림 메시지</span>
   </div>
 
-  <!-- APP SCRIPT -->
   <script>
     let currentData = null;
     let historyStore = [];
@@ -262,7 +226,6 @@
       return `${yyyy}${mm}${dd}`;
     }
 
-    // 날짜별 순번 자동 계산 로직 (동일 날짜 생성 시 01, 02...)
     function calculateSequenceNumber(targetDateStr) {
       const dateKey = getYYYYMMDD(targetDateStr);
       const existingToday = historyStore.filter(item => {
@@ -351,7 +314,6 @@
       document.getElementById('p1TopicText').innerText = p1.subTopic || data.topic || '';
       document.getElementById('p2TopicText').innerText = p2.topic || data.topic || '';
 
-      // 파일명 미리보기 표시 (날짜 + 순번 체계)
       const dateSeq = getYYYYMMDD(targetDate);
       const seq = data.sequence || calculateSequenceNumber(targetDate);
       const computedFileName = `English Community - ${dateSeq} - ${seq}.pdf`;
@@ -433,14 +395,7 @@
       });
     }
 
-    async function generateWorksheetWithGemini() {
-      const apiKey = localStorage.getItem('gemini_api_key') || '';
-      if (!apiKey) {
-        openApiKeyModal();
-        showToast('Gemini API 키를 먼저 설정해 주세요.', 'error');
-        return;
-      }
-
+    async function generateWorksheetWithVercelAPI() {
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Travel & Cultures';
       const targetDate = document.getElementById('targetDateInput').value || new Date().toISOString().split('T')[0];
       const weekInfo = getFormattedKoreanDate(targetDate);
@@ -450,65 +405,42 @@
       
       const btn = document.getElementById('btnGenerate');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>생성 중 (${fileName})...</span>`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Vercel AI 생성 중 (${fileName})...</span>`;
 
       try {
-        const prompt = `You are an expert English curriculum writer for "English Community". 
-Create a professional 2-page learning worksheet strictly based on: "${customTopic}".
-Output ONLY raw JSON matching this structure:
-{
-  "target_date": "${targetDate}",
-  "weekInfo": "${weekInfo}",
-  "sequence": "${sequence}",
-  "file_name": "${fileName}",
-  "topic": "${customTopic}",
-  "page1": {
-    "title": "Daily Talk & Share",
-    "subTopic": "${customTopic}",
-    "questions": [{"q": "1. Question?", "answers": [{"en": "Answer", "kr": "번역"}]}]
-  },
-  "page2": {
-    "topic": "${customTopic}",
-    "todaysExpressions": [{"en": "expr", "kr": "의미", "exampleEn": "Ex", "exampleKr": "예문"}],
-    "reviewExpressions": [{"en": "rev", "kr": "복습", "exampleEn": "Ex", "exampleKr": "예문"}],
-    "storyText": "Story with #expr#...",
-    "questions": [{"q": "1. Q?", "expr": "expr", "qKr": "번역"}]
-  }
-}`;
-
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        const response = await fetch(apiUrl, {
+        const response = await fetch('/api/generate-worksheet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          body: JSON.stringify({
+            topic: customTopic,
+            weekInfo: weekInfo,
+            target_date: targetDate,
+            sequence: sequence,
+            file_name: fileName
+          })
         });
 
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || `서버 오류 발생 (${response.status})`);
+        }
 
-        const resData = await response.json();
-        let rawText = resData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
-        const parsedJSON = JSON.parse(rawText);
+        const parsedJSON = result.data;
         parsedJSON.id = 'ws-' + Date.now();
         parsedJSON.date = new Date().toISOString();
-        parsedJSON.target_date = targetDate;
-        parsedJSON.sequence = sequence;
-        parsedJSON.file_name = fileName;
 
         renderWorksheet(parsedJSON);
         saveToHistory(parsedJSON);
         showToast(`'${fileName}' 생성 완료!`, 'success');
       } catch (error) {
         console.error(error);
-        showToast(error.message || '생성 실패', 'error');
+        showToast(error.message || '학습지 생성에 실패했습니다.', 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i> <span>Gemini AI 학습지 생성</span>`;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i> <span>Vercel AI 학습지 생성</span>`;
       }
     }
 
-    // 원클릭 폴더 저장 및 IndexDB 권한 연동
     async function saveToLocalFolderOneClick() {
       if (!currentData) {
         alert('저장할 학습지 데이터가 없습니다.');
@@ -558,7 +490,6 @@ Output ONLY raw JSON matching this structure:
 
         const fileName = currentData.file_name || `English Community - ${getYYYYMMDD(currentData.target_date)} - ${currentData.sequence || '01'}.pdf`;
         
-        // manifest.json 업데이트
         let manifestData = { version: 1, pdfs: [] };
         try {
           const mHandle = await dirHandle.getFileHandle('manifest.json', { create: true });
@@ -658,17 +589,6 @@ Output ONLY raw JSON matching this structure:
       toastMsg.innerText = msg;
       toast.classList.remove('translate-y-20', 'opacity-0');
       setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
-    }
-
-    function openApiKeyModal() { document.getElementById('apiKeyModal').classList.remove('hidden'); }
-    function closeApiKeyModal() { document.getElementById('apiKeyModal').classList.add('hidden'); }
-    function saveApiKey() {
-      const input = document.getElementById('apiKeyInput');
-      if (input) {
-        localStorage.setItem('gemini_api_key', input.value.trim());
-        closeApiKeyModal();
-        showToast('API 키가 저장되었습니다.', 'success');
-      }
     }
   </script>
 </body>
