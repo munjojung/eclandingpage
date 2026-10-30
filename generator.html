@@ -485,11 +485,6 @@
       document.getElementById('weekInfoInput').value = getFormattedKoreanDate();
 
       loadHistoryFromStorage();
-      if (historyStore.length > 0) {
-        renderWorksheet(historyStore[0]);
-      } else {
-        renderWorksheet(SAMPLE_DATA);
-      }
     });
 
     // Gemini API key is configured only on the server; it is never stored in this page.
@@ -500,7 +495,6 @@
     // Load Sample Data Action
     function loadSampleData() {
       renderWorksheet(SAMPLE_DATA);
-      saveToHistory(SAMPLE_DATA);
       showToast('English Community 등산(Hiking) 샘플이 로드되었습니다.', 'success');
     }
 
@@ -662,8 +656,9 @@
         }
 
         renderWorksheet(result.data);
-        saveToHistory(result.data);
-        showToast('AI 학습지가 성공적으로 생성되었습니다.', 'success');
+        // 생성 후 DB 히스토리를 다시 불러와서 보관함 갱신
+        loadHistoryFromStorage();
+        showToast('AI 학습지가 성공적으로 생성 및 저장되었습니다.', 'success');
       } catch (error) {
         console.error('Worksheet generation failed:', error);
         showToast(error.message || '학습지 생성에 실패했습니다.', 'error');
@@ -673,22 +668,38 @@
       }
     }
 
-    // HISTORY / ARCHIVE MANAGEMENT
-    function saveToHistory(data) {
-      historyStore.unshift(data);
-      if (historyStore.length > 30) historyStore.pop();
-      localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
-      renderHistoryList();
-    }
-
-    function loadHistoryFromStorage() {
-      const stored = localStorage.getItem('ec_worksheet_history');
-      if (stored) {
-        try {
-          historyStore = JSON.parse(stored);
-        } catch(e) { historyStore = []; }
+    // 📌 Neon DB 서버 API(`/api/get-worksheets`)에서 히스토리를 불러오도록 연동된 함수
+    async function loadHistoryFromStorage() {
+      try {
+        const response = await fetch('/api/get-worksheets');
+        const result = await response.json();
+        
+        if (result.success && Array.isArray(result.data)) {
+          historyStore = result.data.map(item => ({
+            id: String(item.id),
+            topic: item.topic,
+            weekInfo: item.target_date,
+            date: item.created_at,
+            page1: item.page1_data,
+            page2: item.page2_data
+          }));
+          renderHistoryList();
+          
+          // 데이터가 존재하고 현재 선택된 데이터가 없을 경우 가장 최근 항목 자동 렌더링
+          if (historyStore.length > 0 && !currentData) {
+            renderWorksheet(historyStore[0]);
+          } else if (historyStore.length === 0) {
+            renderWorksheet(SAMPLE_DATA);
+          }
+        } else {
+          throw new Error('Failed to load worksheets from server');
+        }
+      } catch (error) {
+        console.error('Failed to load history from server, fallback to sample data:', error);
+        historyStore = [];
+        renderHistoryList();
+        renderWorksheet(SAMPLE_DATA);
       }
-      renderHistoryList();
     }
 
     function renderHistoryList(filterText = '') {
@@ -697,8 +708,8 @@
       listEl.innerHTML = '';
 
       const filtered = historyStore.filter(item => 
-        item.topic.toLowerCase().includes(filterText.toLowerCase()) ||
-        item.weekInfo.toLowerCase().includes(filterText.toLowerCase())
+        (item.topic && item.topic.toLowerCase().includes(filterText.toLowerCase())) ||
+        (item.weekInfo && item.weekInfo.toLowerCase().includes(filterText.toLowerCase()))
       );
 
       countEl.innerText = `${filtered.length}개`;
@@ -718,9 +729,6 @@
               <div class="font-bold truncate">${item.topic}</div>
               <div class="text-[10px] text-slate-400 mt-0.5">${item.weekInfo} · ${dateStr}</div>
             </div>
-            <button onclick="event.stopPropagation(); deleteHistoryItem('${item.id}')" class="text-slate-400 hover:text-rose-600 p-1">
-              <i class="fa-solid fa-trash-can text-xs"></i>
-            </button>
           </div>
         `;
       });
@@ -733,13 +741,6 @@
         renderHistoryList();
         showToast(`'${found.topic}' 학습지를 불러왔습니다.`, 'info');
       }
-    }
-
-    function deleteHistoryItem(id) {
-      historyStore = historyStore.filter(i => i.id !== id);
-      localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
-      renderHistoryList();
-      showToast('삭제되었습니다.', 'info');
     }
 
     function filterHistory() {
