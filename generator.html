@@ -1,4 +1,357 @@
-<!-- APP LOGIC & SCRIPT -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English Community Daily Worksheet Generator</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts for Worksheet styling -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Noto Sans KR', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+            jakarta: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            navy: {
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#080d1a',
+            },
+            skybrand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Print Styles */
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+        font-size: 11pt;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        box-shadow: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+      .worksheet-page {
+        border: none !important;
+        padding: 15mm 15mm !important;
+        min-height: 297mm;
+        box-shadow: none !important;
+      }
+    }
+
+    /* Custom Checkbox UI */
+    .checkbox-square {
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid #0284c7;
+      display: inline-block;
+      margin-right: 6px;
+      flex-shrink: 0;
+      border-radius: 2px;
+    }
+
+    /* Highlight hashtag expressions like #expression# */
+    .highlight-expr {
+      background-color: #e0f2fe;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 700;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- TOP HEADER / NAV BAR (NO-PRINT) -->
+  <header class="bg-navy-900 text-white shadow-lg sticky top-0 z-50 no-print border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 bg-gradient-to-tr from-skybrand-600 to-cyan-400 rounded-xl flex items-center justify-center text-white font-bold font-jakarta text-lg shadow-md tracking-tighter">
+          EC
+        </div>
+        <div>
+          <h1 class="font-jakarta font-bold text-lg tracking-wide flex items-center gap-2 text-white">
+            English Community
+            <span class="bg-skybrand-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Daily Worksheet</span>
+          </h1>
+          <p class="text-xs text-sky-200/70">Speak Freely, Connect Deeply. · 회화 & 에세이 2페이지 자동 생성기</p>
+        </div>
+      </div>
+
+      <!-- Header Action Buttons -->
+      <div class="flex items-center space-x-3">
+        <span class="px-3 py-1.5 text-xs text-slate-300 rounded-lg border border-slate-700">
+          <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+          서버 보안 키 사용
+        </span>
+        <button onclick="toggleAutoScheduler()" id="schedulerToggleBtn" class="px-3 py-1.5 bg-navy-800 hover:bg-slate-800 text-xs text-slate-200 rounded-lg flex items-center space-x-2 border border-slate-700 transition">
+          <i class="fa-solid fa-clock text-skybrand-500"></i>
+          <span>자동 생성 스케줄러</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-6 gap-6">
+
+    <!-- SIDEBAR: GENERATOR & ARCHIVE (NO-PRINT) -->
+    <aside class="w-full md:w-80 flex flex-col gap-6 no-print flex-shrink-0">
+      
+      <!-- CONTROLLER CARD -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col gap-4">
+        <h2 class="font-bold text-navy-900 text-base flex items-center gap-2 font-jakarta">
+          <i class="fa-solid fa-compass text-skybrand-600"></i>
+          주제별 학습지 생성
+        </h2>
+
+        <!-- Topic Inputs -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">대화 및 에세이 주제</label>
+          <div class="flex flex-col gap-2">
+            <input type="text" id="customTopicInput" placeholder="예: Travel & Cultures, AI..." class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+            <div class="flex flex-wrap gap-1.5 text-xs text-slate-600">
+              <span class="text-slate-400 self-center">추천:</span>
+              <button onclick="selectTopicPreset('Mountain Hiking & Trekking')" class="px-2 py-1 bg-slate-100 hover:bg-skybrand-50 rounded text-slate-700">#Hiking</button>
+              <button onclick="selectTopicPreset('Travel & Cultures')" class="px-2 py-1 bg-slate-100 hover:bg-skybrand-50 rounded text-slate-700">#Travel</button>
+              <button onclick="selectTopicPreset('Technology & AI')" class="px-2 py-1 bg-slate-100 hover:bg-skybrand-50 rounded text-slate-700">#AI</button>
+              <button onclick="selectTopicPreset('Food & Coffee Culture')" class="px-2 py-1 bg-slate-100 hover:bg-skybrand-50 rounded text-slate-700">#Coffee</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode / Date -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">발행일자</label>
+          <input type="text" id="weekInfoInput" placeholder="예: 2026년 10월 29일 수요일" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+        </div>
+
+        <!-- Generate Buttons -->
+        <div class="flex flex-col gap-2 pt-2">
+          <button id="btnGenerate" onclick="generateWorksheetWithGemini()" class="w-full py-2.5 bg-gradient-to-r from-navy-900 to-skybrand-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg hover:opacity-95 transition flex items-center justify-center space-x-2 text-sm">
+            <i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i>
+            <span>Gemini AI 2페이지 생성</span>
+          </button>
+          <button onclick="loadSampleData()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg transition flex items-center justify-center space-x-1">
+            <i class="fa-solid fa-file-lines text-slate-500"></i>
+            <span>샘플 (Mountain Hiking) 불러오기</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ARCHIVE & HISTORY MANAGER -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex-1 flex flex-col min-h-[300px]">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-navy-900 text-sm flex items-center gap-2 font-jakarta">
+            <i class="fa-solid fa-folder-closed text-slate-500"></i>
+            생성 히스토리 보관함
+          </h3>
+          <span id="historyCount" class="text-xs font-semibold bg-skybrand-50 text-skybrand-700 px-2 py-0.5 rounded-full">0개</span>
+        </div>
+
+        <!-- History Search -->
+        <div class="mb-3">
+          <input type="text" id="historySearch" onkeyup="filterHistory()" placeholder="주제어 검색..." class="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-skybrand-500">
+        </div>
+
+        <!-- History List Container -->
+        <div id="historyList" class="flex-1 overflow-y-auto space-y-2 max-h-[320px] pr-1">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- AUTO SCHEDULER STATUS CARD -->
+      <div id="schedulerCard" class="hidden bg-navy-900 text-slate-300 p-4 rounded-xl text-xs space-y-2 border border-slate-800">
+        <div class="flex items-center justify-between font-semibold text-white">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-play text-emerald-400"></i> 일일 자동 생성 활성화</span>
+          <span id="schedulerTimer" class="font-mono text-sky-400">07:30 AM</span>
+        </div>
+        <p class="text-slate-400">매일 지정된 시각에 English Community 스타일의 신규 2페이지 학습지를 자동 생성합니다.</p>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT MAIN CONTENT: PREVIEW & PRINT SECTION -->
+    <main class="flex-1 flex flex-col gap-4">
+
+      <!-- TOOLBAR: PAGE VIEW SWITCH & EXPORT OPTIONS (NO-PRINT) -->
+      <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 no-print">
+        
+        <!-- View Toggle Tabs -->
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl">
+          <button id="tabAll" onclick="switchTab('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-700 bg-white shadow-sm">
+            전체 (2페이지 보기)
+          </button>
+          <button id="tabPage1" onclick="switchTab('page1')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500 hover:text-slate-700">
+            Page 1 (Daily Talk & Share)
+          </button>
+          <button id="tabPage2" onclick="switchTab('page2')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500 hover:text-slate-700">
+            Page 2 (Essay Topic)
+          </button>
+        </div>
+
+        <!-- Export Actions -->
+        <div class="flex items-center space-x-2">
+          <button onclick="window.print()" class="px-3 py-1.5 bg-skybrand-600 hover:bg-skybrand-700 text-white text-xs font-medium rounded-lg shadow-sm transition flex items-center space-x-1">
+            <i class="fa-solid fa-print"></i>
+            <span>인쇄 / PDF 저장</span>
+          </button>
+          <button onclick="copyContentAsMarkdown()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition flex items-center space-x-1">
+            <i class="fa-regular fa-copy"></i>
+            <span>텍스트 복사</span>
+          </button>
+          <button onclick="exportJSON()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition flex items-center space-x-1">
+            <i class="fa-solid fa-download"></i>
+            <span>JSON 내보내기</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PRINTABLE CONTENT CONTAINER -->
+      <div id="printableContent" class="print-container space-y-8">
+        
+        <!-- PAGE 1: DAILY TALK & SHARE SHEET -->
+        <div id="page1View" class="worksheet-page bg-white p-8 md:p-10 rounded-2xl shadow-md border border-slate-200 text-slate-900 mx-auto max-w-[210mm] min-h-[297mm] flex flex-col justify-between relative">
+          
+          <div>
+            <!-- Header section -->
+            <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
+              <div>
+                <h2 class="text-2xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p1TitleText">Daily Talk & Share</h2>
+                <p class="text-xs font-semibold text-skybrand-600 font-jakarta">Let's talk about <span id="p1TopicText">Mountain Hiking & Trekking</span></p>
+              </div>
+              <div class="text-right flex flex-col items-end">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta mb-1" id="p1WeekText">40주차 · 수목일 Talk</div>
+                <div class="text-xl font-black font-jakarta text-navy-900 tracking-wider">English Community</div>
+                <div class="text-[10px] text-skybrand-600 font-medium">Speak Freely, Connect Deeply.</div>
+              </div>
+            </div>
+
+            <!-- Questions Container -->
+            <div id="dqQuestionsContainer" class="space-y-3.5 text-xs sm:text-sm">
+              <!-- Dynamically populated 10 Daily Talk & Share questions -->
+            </div>
+          </div>
+
+          <!-- Footer Banner -->
+          <div class="mt-6 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+            <span class="font-jakarta font-bold text-navy-900">English Community Academic Series</span>
+            <span>https://englishcommunity.co.kr</span>
+          </div>
+        </div>
+
+        <!-- PAGE BREAK FOR PRINT -->
+        <div class="page-break"></div>
+
+        <!-- PAGE 2: ESSAY TOPIC SHEET -->
+        <div id="page2View" class="worksheet-page bg-white p-8 md:p-10 rounded-2xl shadow-md border border-slate-200 text-slate-900 mx-auto max-w-[210mm] min-h-[297mm] flex flex-col justify-between relative">
+          
+          <div>
+            <!-- Header section -->
+            <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
+              <div>
+                <div class="text-xs font-semibold text-skybrand-600 uppercase tracking-widest font-jakarta">English Community Essay Topic</div>
+                <h2 class="text-2xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p2TopicText">Mountain Hiking & Trekking</h2>
+              </div>
+              <div class="text-right flex flex-col items-end">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta mb-1" id="p2WeekText">2026년 10월 29일 목요일</div>
+                <div class="text-xl font-black font-jakarta text-navy-900 tracking-wider">English Community</div>
+                <div class="text-[10px] text-skybrand-600 font-medium">Speak Freely, Connect Deeply.</div>
+              </div>
+            </div>
+
+            <!-- Expressions Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 text-xs">
+              <!-- Today's Expressions -->
+              <div class="bg-skybrand-50/50 p-3 rounded-lg border border-skybrand-100">
+                <div class="font-bold text-navy-900 mb-1.5 flex items-center gap-1 font-jakarta">
+                  <span class="w-2 h-2 rounded-full bg-skybrand-600"></span>
+                  오늘의 표현 (2인 1조 발표 및 박스 체크)
+                </div>
+                <div id="todaysExprContainer" class="space-y-1.5">
+                  <!-- Expressions injected here -->
+                </div>
+              </div>
+
+              <!-- Review Expressions -->
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div class="font-bold text-navy-900 mb-1.5 flex items-center gap-1 font-jakarta">
+                  <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                  복습 표현 (지난 표현 활용 문장 발표)
+                </div>
+                <div id="reviewExprContainer" class="space-y-1.5">
+                  <!-- Review expressions injected here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Essay Narrative Story -->
+            <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200 leading-relaxed text-xs sm:text-sm text-slate-800" id="essayStoryContainer">
+              <!-- Story Text injected here -->
+            </div>
+
+            <!-- Essay Discussion Questions -->
+            <div class="space-y-2 text-xs">
+              <div class="font-bold text-navy-900 mb-1 font-jakarta">☑ 아래 표현을 활용하여 대화하고 활용 후 체크해주세요.</div>
+              <div id="essayQuestionsContainer" class="grid grid-cols-1 gap-1.5">
+                <!-- 10 Essay questions injected here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Banner -->
+          <div class="mt-6 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+            <span class="font-jakarta font-bold text-navy-900">English Community Essay & Discussion</span>
+            <span>Page 2 / 2</span>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs no-print border border-slate-800">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toastMsg">알림 메시지</span>
+  </div>
+
+  <!-- APP LOGIC & SCRIPT -->
   <script>
     let currentData = null;
     let historyStore = [];
@@ -53,12 +406,16 @@
     };
 
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('weekInfoInput').value = getFormattedKoreanDate();
+      const weekInput = document.getElementById('weekInfoInput');
+      if (weekInput) {
+        weekInput.value = getFormattedKoreanDate();
+      }
       loadHistoryFromStorage();
     });
 
     function selectTopicPreset(topic) {
-      document.getElementById('customTopicInput').value = topic;
+      const topicInput = document.getElementById('customTopicInput');
+      if (topicInput) topicInput.value = topic;
     }
 
     function loadSampleData() {
@@ -77,146 +434,165 @@
       const inactiveClasses = ['text-slate-500', 'hover:text-slate-700'];
 
       [btnAll, btnP1, btnP2].forEach(btn => {
-        btn.classList.remove(...activeClasses);
-        btn.classList.add(...inactiveClasses);
+        if (btn) {
+          btn.classList.remove(...activeClasses);
+          btn.classList.add(...inactiveClasses);
+        }
       });
 
       if (mode === 'all') {
-        p1.classList.remove('hidden');
-        p2.classList.remove('hidden');
-        btnAll.classList.add(...activeClasses);
+        if (p1) p1.classList.remove('hidden');
+        if (p2) p2.classList.remove('hidden');
+        if (btnAll) btnAll.classList.add(...activeClasses);
       } else if (mode === 'page1') {
-        p1.classList.remove('hidden');
-        p2.classList.add('hidden');
-        btnP1.classList.add(...activeClasses);
+        if (p1) p1.classList.remove('hidden');
+        if (p2) p2.classList.add('hidden');
+        if (btnP1) btnP1.classList.add(...activeClasses);
       } else if (mode === 'page2') {
-        p1.classList.add('hidden');
-        p2.classList.remove('hidden');
-        btnP2.classList.add(...activeClasses);
+        if (p1) p1.classList.add('hidden');
+        if (p2) p2.classList.remove('hidden');
+        if (btnP2) btnP2.classList.add(...activeClasses);
       }
     }
 
-    // 📌 데이터 구조를 유연하게 탐색하여 렌더링하는 안전한 함수
     function renderWorksheet(data) {
       if (!data) return;
       currentData = data;
 
-      // DB에서 객체 혹은 문자열로 넘어온 데이터 파싱
       const p1 = safeJsonParse(data.page1) || data.page1 || {};
       const p2 = safeJsonParse(data.page2) || data.page2 || {};
 
-      console.log("Rendering worksheet data:", { p1, p2 }); // 디버깅용
+      const weekText = data.weekInfo || data.target_date || getFormattedKoreanDate();
+      const elP1Week = document.getElementById('p1WeekText');
+      if (elP1Week) elP1Week.innerText = weekText;
 
-      document.getElementById('p1WeekText').innerText = data.weekInfo || data.target_date || getFormattedKoreanDate();
-      document.getElementById('p1TitleText').innerText = p1.title || "Daily Talk & Share";
-      document.getElementById('p1TopicText').innerText = p1.subTopic || data.topic || '';
+      const elP1Title = document.getElementById('p1TitleText');
+      if (elP1Title) elP1Title.innerText = p1.title || "Daily Talk & Share";
 
-      document.getElementById('p2WeekText').innerText = data.weekInfo || data.target_date || getFormattedKoreanDate();
+      const elP1Topic = document.getElementById('p1TopicText');
+      if (elP1Topic) elP1Topic.innerText = p1.subTopic || data.topic || '';
 
-      // Page 1 Questions 렌더링 (질문 배열이 다양한 위치에 있을 경우를 대비한 유연한 탐색)
+      const elP2Week = document.getElementById('p2WeekText');
+      if (elP2Week) elP2Week.innerText = weekText;
+
       const dqContainer = document.getElementById('dqQuestionsContainer');
-      dqContainer.innerHTML = '';
-      
-      const qList = p1.questions || p1.data?.questions || (Array.isArray(p1) ? p1 : []);
-      
-      if (qList.length > 0) {
-        qList.forEach((qObj, index) => {
-          const qText = qObj.q || qObj.question || `Question ${index + 1}`;
-          const answersArr = qObj.answers || qObj.answer || [];
-          
-          const answersHtml = answersArr.map(ans => `
-            <div class="flex items-start">
-              <span class="checkbox-square mt-1"></span>
-              <div>
-                <div>${ans.en || ans.english || ''}</div>
-                <div class="text-[11px] text-slate-500">${ans.kr || ans.korean || ''}</div>
+      if (dqContainer) {
+        dqContainer.innerHTML = '';
+        const qList = p1.questions || p1.data?.questions || (Array.isArray(p1) ? p1 : []);
+        
+        if (qList.length > 0) {
+          qList.forEach((qObj, index) => {
+            const qText = qObj.q || qObj.question || `Question ${index + 1}`;
+            const answersArr = qObj.answers || qObj.answer || [];
+            
+            const answersHtml = answersArr.map(ans => `
+              <div class="flex items-start">
+                <span class="checkbox-square mt-1"></span>
+                <div>
+                  <div>${ans.en || ans.english || ''}</div>
+                  <div class="text-[11px] text-slate-500">${ans.kr || ans.korean || ''}</div>
+                </div>
               </div>
-            </div>
-          `).join('');
+            `).join('');
 
-          dqContainer.innerHTML += `
-            <div class="border-b border-slate-100 pb-2">
-              <div class="font-bold text-navy-900 mb-1 flex items-start gap-1">
-                <span>${qText}</span>
+            dqContainer.innerHTML += `
+              <div class="border-b border-slate-100 pb-2">
+                <div class="font-bold text-navy-900 mb-1 flex items-start gap-1">
+                  <span>${qText}</span>
+                </div>
+                <div class="space-y-1 pl-3 text-slate-700">
+                  ${answersHtml}
+                </div>
               </div>
-              <div class="space-y-1 pl-3 text-slate-700">
-                ${answersHtml}
+            `;
+          });
+        } else {
+          dqContainer.innerHTML = `<div class="text-xs text-slate-400 py-4 text-center">표시할 대화 질문이 없습니다.</div>`;
+        }
+      }
+
+      const elP2Topic = document.getElementById('p2TopicText');
+      if (elP2Topic) elP2Topic.innerText = p2.topic || data.topic || '';
+
+      const todaysContainer = document.getElementById('todaysExprContainer');
+      if (todaysContainer) {
+        todaysContainer.innerHTML = '';
+        const todaysExprs = p2.todaysExpressions || p2.expressions || [];
+        todaysExprs.forEach((item, idx) => {
+          todaysContainer.innerHTML += `
+            <div class="flex items-start justify-between text-[11px]">
+              <div>
+                <span class="font-bold text-navy-900">${idx+1}. #${item.en || item.expression || ''}: ${item.kr || item.meaning || ''}#</span>
+                <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
               </div>
+              <span class="checkbox-square"></span>
             </div>
           `;
         });
-      } else {
-        dqContainer.innerHTML = `<div class="text-xs text-slate-400 py-4 text-center">표시할 대화 질문이 없습니다. (데이터 구조 확인 필요)</div>`;
       }
 
-      // Page 2 렌더링
-      document.getElementById('p2TopicText').innerText = p2.topic || data.topic || '';
-
-      const todaysContainer = document.getElementById('todaysExprContainer');
-      todaysContainer.innerHTML = '';
-      const todaysExprs = p2.todaysExpressions || p2.expressions || [];
-      todaysExprs.forEach((item, idx) => {
-        todaysContainer.innerHTML += `
-          <div class="flex items-start justify-between text-[11px]">
-            <div>
-              <span class="font-bold text-navy-900">${idx+1}. #${item.en || item.expression || ''}: ${item.kr || item.meaning || ''}#</span>
-              <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
-            </div>
-            <span class="checkbox-square"></span>
-          </div>
-        `;
-      });
-
       const reviewContainer = document.getElementById('reviewExprContainer');
-      reviewContainer.innerHTML = '';
-      const reviewExprs = p2.reviewExpressions || [];
-      reviewExprs.forEach((item, idx) => {
-        reviewContainer.innerHTML += `
-          <div class="flex items-start justify-between text-[11px]">
-            <div>
-              <span class="font-bold text-navy-900">${idx+1}. #${item.en || ''}: ${item.kr || ''}#</span>
-              <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+      if (reviewContainer) {
+        reviewContainer.innerHTML = '';
+        const reviewExprs = p2.reviewExpressions || [];
+        reviewExprs.forEach((item, idx) => {
+          reviewContainer.innerHTML += `
+            <div class="flex items-start justify-between text-[11px]">
+              <div>
+                <span class="font-bold text-navy-900">${idx+1}. #${item.en || ''}: ${item.kr || ''}#</span>
+                <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+              </div>
+              <span class="checkbox-square"></span>
             </div>
-            <span class="checkbox-square"></span>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
 
       const rawStory = p2.storyText || p2.story || '';
       let highlightedStory = rawStory.replace(/#([^#]+)#/g, '<span class="highlight-expr">$1</span>');
-      document.getElementById('essayStoryContainer').innerHTML = `
-        <div class="font-semibold text-navy-900 text-xs mb-1.5 flex items-center gap-1.5 font-jakarta">
-          <i class="fa-solid fa-book-open text-skybrand-600"></i> Essay Narrative Story
-        </div>
-        <p class="leading-relaxed font-serif text-slate-800">${highlightedStory || '스토리 내용이 없습니다.'}</p>
-      `;
+      const elStory = document.getElementById('essayStoryContainer');
+      if (elStory) {
+        elStory.innerHTML = `
+          <div class="font-semibold text-navy-900 text-xs mb-1.5 flex items-center gap-1.5 font-jakarta">
+            <i class="fa-solid fa-book-open text-skybrand-600"></i> Essay Narrative Story
+          </div>
+          <p class="leading-relaxed font-serif text-slate-800">${highlightedStory || '스토리 내용이 없습니다.'}</p>
+        `;
+      }
 
       const essayQContainer = document.getElementById('essayQuestionsContainer');
-      essayQContainer.innerHTML = '';
-      const essayQuestions = p2.questions || [];
-      essayQuestions.forEach((qObj) => {
-        essayQContainer.innerHTML += `
-          <div class="flex items-start justify-between text-[11px] py-1 border-b border-slate-100">
-            <div class="pr-2">
-              <div class="font-semibold text-navy-900">${qObj.q || qObj.question || ''}</div>
-              <div class="text-slate-500 flex items-center gap-2 mt-0.5">
-                <span class="text-skybrand-700 font-bold">&gt; #${qObj.expr || qObj.expression || ''}#</span>
-                <span>${qObj.qKr || qObj.korean || ''}</span>
+      if (essayQContainer) {
+        essayQContainer.innerHTML = '';
+        const essayQuestions = p2.questions || [];
+        essayQuestions.forEach((qObj) => {
+          essayQContainer.innerHTML += `
+            <div class="flex items-start justify-between text-[11px] py-1 border-b border-slate-100">
+              <div class="pr-2">
+                <div class="font-semibold text-navy-900">${qObj.q || qObj.question || ''}</div>
+                <div class="text-slate-500 flex items-center gap-2 mt-0.5">
+                  <span class="text-skybrand-700 font-bold">&gt; #${qObj.expr || qObj.expression || ''}#</span>
+                  <span>${qObj.qKr || qObj.korean || ''}</span>
+                </div>
               </div>
+              <span class="checkbox-square mt-0.5"></span>
             </div>
-            <span class="checkbox-square mt-0.5"></span>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
     }
 
     async function generateWorksheetWithGemini() {
-      const customTopic = document.getElementById('customTopicInput').value.trim() || 'Mountain Hiking';
-      const weekInfo = document.getElementById('weekInfoInput').value.trim() || getFormattedKoreanDate();
+      const customTopicInput = document.getElementById('customTopicInput');
+      const weekInfoInput = document.getElementById('weekInfoInput');
+      const customTopic = customTopicInput ? customTopicInput.value.trim() : 'Mountain Hiking';
+      const weekInfo = weekInfoInput ? weekInfoInput.value.trim() : getFormattedKoreanDate();
+      
       const btn = document.getElementById('btnGenerate');
-      const originalHTML = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Gemini AI 생성 중...</span>`;
+      const originalHTML = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Gemini AI 생성 중...</span>`;
+      }
 
       try {
         const response = await fetch('/api/generate-worksheet', {
@@ -238,8 +614,10 @@
         console.error('Worksheet generation failed:', error);
         showToast(error.message || '학습지 생성에 실패했습니다.', 'error');
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHTML;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHTML;
+        }
       }
     }
 
@@ -279,6 +657,7 @@
     function renderHistoryList(filterText = '') {
       const listEl = document.getElementById('historyList');
       const countEl = document.getElementById('historyCount');
+      if (!listEl) return;
       listEl.innerHTML = '';
 
       const filtered = historyStore.filter(item => 
@@ -286,7 +665,7 @@
         (item.weekInfo && item.weekInfo.toLowerCase().includes(filterText.toLowerCase()))
       );
 
-      countEl.innerText = `${filtered.length}개`;
+      if (countEl) countEl.innerText = `${filtered.length}개`;
 
       if (filtered.length === 0) {
         listEl.innerHTML = `<div class="text-xs text-slate-400 text-center py-6">보관된 학습지가 없습니다.</div>`;
@@ -318,7 +697,8 @@
     }
 
     function filterHistory() {
-      const q = document.getElementById('historySearch').value;
+      const historySearchInput = document.getElementById('historySearch');
+      const q = historySearchInput ? historySearchInput.value : '';
       renderHistoryList(q);
     }
 
@@ -329,13 +709,13 @@
       if (isSchedulerActive) {
         clearInterval(schedulerInterval);
         isSchedulerActive = false;
-        card.classList.add('hidden');
-        btn.classList.remove('bg-skybrand-700');
+        if (card) card.classList.add('hidden');
+        if (btn) btn.classList.remove('bg-skybrand-700');
         showToast('일일 자동 생성 스케줄러가 비활성화되었습니다.', 'info');
       } else {
         isSchedulerActive = true;
-        card.classList.remove('hidden');
-        btn.classList.add('bg-skybrand-700');
+        if (card) card.classList.remove('hidden');
+        if (btn) btn.classList.add('bg-skybrand-700');
         showToast('매일 오전 07:30 자동 생성 시뮬레이션 활성화!', 'success');
       }
     }
@@ -362,7 +742,7 @@
     function showToast(msg, type = 'info') {
       const toast = document.getElementById('toast');
       const toastMsg = document.getElementById('toastMsg');
-      const toastIcon = document.getElementById('toastIcon');
+      if (!toast || !toastMsg) return;
 
       toastMsg.innerText = msg;
       toast.classList.remove('translate-y-20', 'opacity-0');
@@ -370,4 +750,7 @@
         toast.classList.add('translate-y-20', 'opacity-0');
       }, 3000);
     }
+  </script>
+</body>
+</html>
   </script>
