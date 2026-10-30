@@ -260,9 +260,9 @@
               </div>
             </div>
 
-            <!-- Questions Container -->
-            <div id="dqQuestionsContainer" class="space-y-3.5 text-xs sm:text-sm">
-              <!-- Dynamically populated 10 Daily Talk & Share questions -->
+            <!-- Questions Container (Supports structured arrays or raw Markdown text) -->
+            <div id="dqQuestionsContainer" class="space-y-3.5 text-xs sm:text-sm leading-relaxed">
+              <!-- Dynamically populated -->
             </div>
           </div>
 
@@ -455,6 +455,7 @@
       }
     }
 
+    // 📌 배열 및 마크다운 텍스트 모두 유연하게 처리하는 렌더링 함수
     function renderWorksheet(data) {
       if (!data) return;
       currentData = data;
@@ -476,13 +477,14 @@
       const elP2Week = document.getElementById('p2WeekText');
       if (elP2Week) elP2Week.innerText = weekText;
 
+      // Page 1 렌더링 (구조화된 배열 또는 마크다운 텍스트 모두 지원)
       const dqContainer = document.getElementById('dqQuestionsContainer');
       if (dqContainer) {
         dqContainer.innerHTML = '';
         
-        const qList = p1.questions || p1.data?.questions || p1.list || (Array.isArray(p1) ? p1 : []);
+        const qList = p1.questions || p1.data?.questions || p1.list || (Array.isArray(p1) ? p1 : null);
         
-        if (qList.length > 0) {
+        if (qList && qList.length > 0) {
           qList.forEach((qObj, index) => {
             const qText = qObj.q || qObj.question || qObj.text || `Question ${index + 1}`;
             const answersArr = qObj.answers || qObj.answer || qObj.options || [];
@@ -509,7 +511,11 @@
             `;
           });
         } else {
-          dqContainer.innerHTML = `<div class="text-xs text-slate-400 py-4 text-center">표시할 대화 질문이 없습니다.</div>`;
+          // 만약 데이터가 통째로 텍스트(마크다운) 형태인 경우 그대로 출력
+          let rawText = typeof p1 === 'string' ? p1 : (p1.text || p1.content || JSON.stringify(p1, null, 2));
+          // 줄바꿈 처리 및 해시태그 강조
+          rawText = rawText.replace(/\n/g, '<br>').replace(/#([^#]+)#/g, '<span class="highlight-expr">$1</span>');
+          dqContainer.innerHTML = `<div class="text-xs text-slate-800 whitespace-pre-line leading-relaxed">${rawText}</div>`;
         }
       }
 
@@ -520,34 +526,42 @@
       if (todaysContainer) {
         todaysContainer.innerHTML = '';
         const todaysExprs = p2.todaysExpressions || p2.expressions || p2.today || [];
-        todaysExprs.forEach((item, idx) => {
-          todaysContainer.innerHTML += `
-            <div class="flex items-start justify-between text-[11px]">
-              <div>
-                <span class="font-bold text-navy-900">${idx+1}. #${item.en || item.expression || ''}: ${item.kr || item.meaning || ''}#</span>
-                <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+        if (todaysExprs.length > 0) {
+          todaysExprs.forEach((item, idx) => {
+            todaysContainer.innerHTML += `
+              <div class="flex items-start justify-between text-[11px]">
+                <div>
+                  <span class="font-bold text-navy-900">${idx+1}. #${item.en || item.expression || ''}: ${item.kr || item.meaning || ''}#</span>
+                  <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+                </div>
+                <span class="checkbox-square"></span>
               </div>
-              <span class="checkbox-square"></span>
-            </div>
-          `;
-        });
+            `;
+          });
+        } else {
+          todaysContainer.innerHTML = `<div class="text-[11px] text-slate-400">오늘의 표현 항목 없음</div>`;
+        }
       }
 
       const reviewContainer = document.getElementById('reviewExprContainer');
       if (reviewContainer) {
         reviewContainer.innerHTML = '';
         const reviewExprs = p2.reviewExpressions || p2.review || [];
-        reviewExprs.forEach((item, idx) => {
-          reviewContainer.innerHTML += `
-            <div class="flex items-start justify-between text-[11px]">
-              <div>
-                <span class="font-bold text-navy-900">${idx+1}. #${item.en || item.expression || ''}: ${item.kr || item.meaning || ''}#</span>
-                <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+        if (reviewExprs.length > 0) {
+          reviewExprs.forEach((item, idx) => {
+            reviewContainer.innerHTML += `
+              <div class="flex items-start justify-between text-[11px]">
+                <div>
+                  <span class="font-bold text-navy-900">${idx+1}. #${item.en || item.expression || ''}: ${item.kr || item.meaning || ''}#</span>
+                  <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+                </div>
+                <span class="checkbox-square"></span>
               </div>
-              <span class="checkbox-square"></span>
-            </div>
-          `;
-        });
+            `;
+          });
+        } else {
+          reviewContainer.innerHTML = `<div class="text-[11px] text-slate-400">복습 표현 항목 없음</div>`;
+        }
       }
 
       const rawStory = p2.storyText || p2.story || p2.narrative || '';
@@ -566,20 +580,24 @@
       if (essayQContainer) {
         essayQContainer.innerHTML = '';
         const essayQuestions = p2.questions || p2.essayQuestions || [];
-        essayQuestions.forEach((qObj) => {
-          essayQContainer.innerHTML += `
-            <div class="flex items-start justify-between text-[11px] py-1 border-b border-slate-100">
-              <div class="pr-2">
-                <div class="font-semibold text-navy-900">${qObj.q || qObj.question || ''}</div>
-                <div class="text-slate-500 flex items-center gap-2 mt-0.5">
-                  <span class="text-skybrand-700 font-bold">&gt; #${qObj.expr || qObj.expression || ''}#</span>
-                  <span>${qObj.qKr || qObj.korean || ''}</span>
+        if (essayQuestions.length > 0) {
+          essayQuestions.forEach((qObj) => {
+            essayQContainer.innerHTML += `
+              <div class="flex items-start justify-between text-[11px] py-1 border-b border-slate-100">
+                <div class="pr-2">
+                  <div class="font-semibold text-navy-900">${qObj.q || qObj.question || ''}</div>
+                  <div class="text-slate-500 flex items-center gap-2 mt-0.5">
+                    <span class="text-skybrand-700 font-bold">&gt; #${qObj.expr || qObj.expression || ''}#</span>
+                    <span>${qObj.qKr || qObj.korean || ''}</span>
+                  </div>
                 </div>
+                <span class="checkbox-square mt-0.5"></span>
               </div>
-              <span class="checkbox-square mt-0.5"></span>
-            </div>
-          `;
-        });
+            `;
+          });
+        } else {
+          essayQContainer.innerHTML = `<div class="text-xs text-slate-400 py-2">토론 질문 항목이 없습니다.</div>`;
+        }
       }
     }
 
