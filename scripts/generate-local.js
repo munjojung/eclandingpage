@@ -9,6 +9,9 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
 const VERCEL_SAVE_API_URL = "https://eclandingpage-kappa.vercel.app/api/save-worksheet";
 
+// 📌 지연 함수 (재시도 대기용)
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function runLocalGeneration() {
   const topic = "Food & Coffee Culture";
   const targetDate = "2026-10-30";
@@ -26,11 +29,11 @@ async function runLocalGeneration() {
   }
 
   try {
-    // 1. 로컬에서 시간 제한 없이 안전하게 Gemini API 호출
-    const geminiData = await callGeminiAPI(topic, targetDate);
+    // 1. 재시도 로직이 포함된 Gemini API 호출 함수 실행
+    const geminiData = await callGeminiAPIWithRetry(topic, targetDate);
     console.log("[1/3] ✅ AI 학습지 2페이지 생성 완료!");
 
-    // 2. 💡 [추가] Vercel 전송 전, 로컬 PC에 JSON 파일로 안전하게 백업 저장
+    // 2. Vercel 전송 전, 로컬 PC에 JSON 파일로 안전하게 백업 저장
     const outputDir = path.resolve('local_outputs');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
@@ -69,7 +72,26 @@ async function runLocalGeneration() {
     }
 
   } catch (error) {
-    console.error("❌ 실행 중 에러 발생:", error);
+    console.error("❌ 실행 중 최종 에러 발생:", error);
+  }
+}
+
+// 📌 503 에러 발생 시 최대 3회까지 재시도하는 래퍼 함수 (5초 -> 10초 -> 15초 대기)
+async function callGeminiAPIWithRetry(topic, targetDate, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await callGeminiAPI(topic, targetDate);
+    } catch (error) {
+      const isServiceUnavailable = error.message.includes('503') || error.message.includes('UNAVAILABLE');
+      
+      if (isServiceUnavailable && attempt < maxRetries) {
+        const waitTime = attempt * 5000; // 1차 시도 후 5초, 2차 시도 후 10초 대기
+        console.warn(`⚠️ [경고] 서버 과부하(503) 감지. ${attempt}회차 시도 실패. ${waitTime / 1000}초 후 다시 시도합니다...`);
+        await sleep(waitTime);
+      } else {
+        throw error; // 503이 아니거나 최대 재시도 횟수를 초과한 경우 에러 발생
+      }
+    }
   }
 }
 
