@@ -53,17 +53,32 @@
   <!-- MAIN CONTAINER -->
   <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-8 space-y-6">
     
-    <!-- Title Section -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-      <div>
-        <h2 class="text-xl font-bold font-jakarta text-navy-900 flex items-center gap-2">
-          <i class="fa-solid fa-folder-open text-skybrand-600"></i>
-          주간 회화 & 에세이 학습지 다운로드
-        </h2>
-        <p class="text-xs text-slate-500 mt-1">커뮤니티 세션 및 자율 학습을 위한 2페이지 구성의 공식 학습지 목록입니다. (회원 전용)</p>
+    <!-- Title & Folder Config Section -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 class="text-xl font-bold font-jakarta text-navy-900 flex items-center gap-2">
+            <i class="fa-solid fa-folder-open text-skybrand-600"></i>
+            주간 회화 & 에세이 학습지 다운로드
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">커뮤니티 세션 및 자율 학습을 위한 2페이지 구성의 공식 학습지 목록입니다. (회원 전용)</p>
+        </div>
+        <div class="w-full md:w-64">
+          <input type="text" id="searchBox" onkeyup="filterWorksheets()" placeholder="주제어 검색..." class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+        </div>
       </div>
-      <div class="w-full md:w-64">
-        <input type="text" id="searchBox" onkeyup="filterWorksheets()" placeholder="주제어 검색..." class="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+
+      <!-- 폴더 지정 설정 바 -->
+      <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200/60">
+        <div class="flex items-center gap-2 overflow-hidden flex-1">
+          <i class="fa-solid fa-folder-tree text-skybrand-600 flex-shrink-0"></i>
+          <span class="text-xs font-semibold text-slate-700 flex-shrink-0">다운로드 저장 경로:</span>
+          <input type="text" id="downloadPathInput" value="C:\Users\Quito\Documents\private_pdfs" class="text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-md text-slate-600 flex-1 focus:outline-none focus:ring-1 focus:ring-skybrand-500 font-mono">
+        </div>
+        <button onclick="saveDownloadPath()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-navy-900 text-white text-xs font-medium rounded-lg transition flex items-center justify-center gap-1.5 flex-shrink-0">
+          <i class="fa-solid fa-floppy-disk text-amber-400"></i>
+          <span>폴더 경로 저장</span>
+        </button>
       </div>
     </div>
 
@@ -113,7 +128,25 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadWorksheets();
+      loadSavedPath();
     });
+
+    function loadSavedPath() {
+      const savedPath = localStorage.getItem('ec_download_path');
+      if (savedPath) {
+        document.getElementById('downloadPathInput').value = savedPath;
+      }
+    }
+
+    function saveDownloadPath() {
+      const pathInput = document.getElementById('downloadPathInput').value.trim();
+      if (!pathInput) {
+        showToast('저장 폴더 경로를 입력해 주세요.', 'error');
+        return;
+      }
+      localStorage.setItem('ec_download_path', pathInput);
+      showToast(`저장 폴더가 설정되었습니다: ${pathInput}`, 'success');
+    }
 
     function loadWorksheets() {
       const stored = localStorage.getItem('ec_worksheet_history');
@@ -249,7 +282,7 @@
 
       if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
         closeAuthModal();
-        showToast('회원 인증 완료! PDF 창을 준비합니다.', 'success');
+        showToast('회원 인증 완료! 지정 폴더 다운로드를 준비합니다.', 'success');
         executePDFDownload(pendingDownloadId);
         return;
       }
@@ -258,7 +291,6 @@
       errorDiv.style.display = 'block';
     }
 
-    // 💡 인쇄 완료/취소 직후 about:blank 창이 자동으로 닫히도록 개선된 함수
     function executePDFDownload(id) {
       let target = worksheets.find(i => i.id === id);
       if (!target && worksheets.length > 0) {
@@ -286,22 +318,24 @@
         };
       }
 
+      // 요청하신 형식: English Community - 20261030_1413 형식 (일별 unique 값 반영)
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, '0');
       const dd = String(now.getDate()).padStart(2, '0');
       const hh = String(now.getHours()).padStart(2, '0');
       const min = String(now.getMinutes()).padStart(2, '0');
-      const timeStr = `${yyyy}${mm}${dd}_${hh}${min}`;
+      const uniqueTimeStr = `${yyyy}${mm}${dd}_${hh}${min}`;
       
-      const dynamicTitle = `English Community - 학습지 - ${timeStr}`;
+      const fileName = `English Community - ${uniqueTimeStr}.pdf`;
+      const currentFolderPath = document.getElementById('downloadPathInput').value.trim();
 
       const htmlContent = `
         <!DOCTYPE html>
         <html lang="ko">
         <head>
           <meta charset="UTF-8">
-          <title>${dynamicTitle}</title>
+          <title>${fileName}</title>
           <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
           <style>
             @page { size: A4; margin: 8mm 10mm; }
@@ -315,6 +349,12 @@
           </style>
         </head>
         <body>
+          <!-- 인쇄 안내 배너 (지정 폴더 안내) -->
+          <div style="background:#f8fafc; border-bottom:1px solid #cbd5e1; padding:6px 12px; font-size:11px; color:#475569; display:flex; justify-content:space-between;" class="no-print">
+            <span>📁 지정 저장 폴더: <strong>${currentFolderPath}</strong></span>
+            <span>💡 인쇄 창에서 파일명을 <strong>${fileName}</strong>(으)로 저장하세요.</span>
+          </div>
+
           <!-- PAGE 1 -->
           <div class="page">
             <div>
@@ -412,7 +452,6 @@
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-                // 인쇄 대화상자가 닫힌 후 about:blank 창 자동 닫기
                 setTimeout(function() {
                   window.close();
                 }, 500);
