@@ -102,11 +102,12 @@
 
     async function fetchDbFiles() {
       try {
-        const res = await fetch('/api/worksheets');
-        const data = await res.json();
+        // 📌 올바른 API 엔드포인트 지정 (/api/get-worksheets)
+        const res = await fetch('/api/get-worksheets');[cite: 16]
+        const result = await res.json();
         
-        if (res.ok && data) {
-          dbFileList = Array.isArray(data) ? data : (data.items || data.worksheets || []);
+        if (res.ok && result.success && result.data) {
+          dbFileList = Array.isArray(result.data) ? result.data : [];
           if (dbFileList.length > 0) {
             fileNameDisplay.textContent = "DB 연동됨 (" + dbFileList.length + "개)";
             loadingText.textContent = "DB 목록 로드 완료. [DB 연동 첫 번째 파일 열기] 버튼을 눌러주세요.";
