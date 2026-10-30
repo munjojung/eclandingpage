@@ -1,9 +1,10 @@
 // scripts/generate-local.js
+import fs from 'fs';
+import path from 'path';
 
 // 📌 .env 파일에 정의된 환경 변수들을 가져옵니다.
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY;
-// 환경 변수에서 모델명을 가져오며, 없으면 기본값 사용
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash"; 
 
 const VERCEL_SAVE_API_URL = "https://eclandingpage-kappa.vercel.app/api/save-worksheet";
@@ -13,7 +14,7 @@ async function runLocalGeneration() {
   const targetDate = "2026-10-30";
 
   console.log(`==================================================`);
-  console.log(`[1/2] 로컬 환경에서 Gemini AI 학습지 생성 시작...`);
+  console.log(`[1/3] 로컬 환경에서 Gemini AI 학습지 생성 시작...`);
   console.log(`- 사용 모델: ${GEMINI_MODEL}`);
   console.log(`- 주제: ${topic}`);
   console.log(`- 날짜: ${targetDate}`);
@@ -27,11 +28,22 @@ async function runLocalGeneration() {
   try {
     // 1. 로컬에서 시간 제한 없이 안전하게 Gemini API 호출
     const geminiData = await callGeminiAPI(topic, targetDate);
-    console.log("[1/2] ✅ AI 학습지 2페이지 생성 완료!");
+    console.log("[1/3] ✅ AI 학습지 2페이지 생성 완료!");
 
-    console.log("[2/2] Vercel 저장 전용 API로 데이터 전송 중...");
+    // 2. 💡 [추가] Vercel 전송 전, 로컬 PC에 JSON 파일로 안전하게 백업 저장
+    const outputDir = path.resolve('local_outputs');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    const fileName = `worksheet_${targetDate}_${Date.now()}.json`;
+    const filePath = path.join(outputDir, fileName);
+    
+    fs.writeFileSync(filePath, JSON.stringify({ topic, targetDate, ...geminiData }, null, 2), 'utf-8');
+    console.log(`[2/3] 💾 로컬 백업 저장 완료: ${filePath}`);
 
-    // 2. 완성된 데이터를 Vercel 저장 API로 전송하여 Neon DB에 적재
+    console.log("[3/3] Vercel 저장 전용 API로 데이터 전송 중...");
+
+    // 3. 완성된 데이터를 Vercel 저장 API로 전송하여 Neon DB에 적재
     const response = await fetch(VERCEL_SAVE_API_URL, {
       method: 'POST',
       headers: {
@@ -53,7 +65,7 @@ async function runLocalGeneration() {
       console.log("👉 이제 브라우저에서 generator.html을 새로고침하여 히스토리를 확인하세요!");
       console.log("==================================================");
     } else {
-      console.error("❌ Vercel 저장 실패:", result);
+      console.error("❌ Vercel 저장 실패 (하지만 로컬 폴더에 백업되어 있습니다):", result);
     }
 
   } catch (error) {
@@ -64,7 +76,6 @@ async function runLocalGeneration() {
 async function callGeminiAPI(topic, targetDate) {
   const prompt = `Create a 2-page English learning worksheet about "${topic}" for date ${targetDate}. Return the result strictly in valid JSON format with keys "page1" and "page2".`;
 
-  // 📌 환경 변수에서 불러온 모델명을 URL 경로에 동적으로 반영
   const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
