@@ -9,7 +9,15 @@ export default async function handler(req, res) {
 
   try {
     const { id, file_name } = req.body;
-    const sql = neon(process.env.DATABASE_URL);
+    
+    // 📌 첨부된 Vercel 환경 변수 이미지에 맞춰 POSTGRES_URL_NON_POOLING 사용
+    const connectionString = process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL;
+    
+    if (!connectionString) {
+      return res.status(500).json({ success: false, error: 'Vercel 환경 변수에 POSTGRES_URL_NON_POOLING이 설정되어 있지 않습니다.' });
+    }
+
+    const sql = neon(connectionString);
 
     if (!id && !file_name) {
       return res.status(400).json({ success: false, error: '삭제할 항목의 ID 또는 파일명이 전달되지 않았습니다.' });
