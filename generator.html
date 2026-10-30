@@ -531,12 +531,13 @@
 
     // Render Worksheet Data into HTML
     function renderWorksheet(data) {
+      if (!data) return;
       currentData = data;
 
       // Page 1 Headers
       document.getElementById('p1WeekText').innerText = data.weekInfo || getFormattedKoreanDate();
-      document.getElementById('p1TitleText').innerText = data.page1.title || "Daily Talk & Share";
-      document.getElementById('p1TopicText').innerText = data.page1.subTopic || data.topic;
+      document.getElementById('p1TitleText').innerText = data.page1?.title || "Daily Talk & Share";
+      document.getElementById('p1TopicText').innerText = data.page1?.subTopic || data.topic || '';
 
       // Page 2 Headers
       document.getElementById('p2WeekText').innerText = data.weekInfo || getFormattedKoreanDate();
@@ -544,63 +545,71 @@
       // Render Page 1 Questions
       const dqContainer = document.getElementById('dqQuestionsContainer');
       dqContainer.innerHTML = '';
-      data.page1.questions.forEach((qObj) => {
-        const itemHtml = `
-          <div class="border-b border-slate-100 pb-2">
-            <div class="font-bold text-navy-900 mb-1 flex items-start gap-1">
-              <span>${qObj.q}</span>
+      if (data.page1 && Array.isArray(data.page1.questions)) {
+        data.page1.questions.forEach((qObj) => {
+          const answersHtml = Array.isArray(qObj.answers) ? qObj.answers.map(ans => `
+            <div class="flex items-start">
+              <span class="checkbox-square mt-1"></span>
+              <div>
+                <div>${ans.en || ''}</div>
+                <div class="text-[11px] text-slate-500">${ans.kr || ''}</div>
+              </div>
             </div>
-            <div class="space-y-1 pl-3 text-slate-700">
-              ${qObj.answers.map(ans => `
-                <div class="flex items-start">
-                  <span class="checkbox-square mt-1"></span>
-                  <div>
-                    <div>${ans.en}</div>
-                    <div class="text-[11px] text-slate-500">${ans.kr}</div>
-                  </div>
-                </div>
-              `).join('')}
+          `).join('') : '';
+
+          dqContainer.innerHTML += `
+            <div class="border-b border-slate-100 pb-2">
+              <div class="font-bold text-navy-900 mb-1 flex items-start gap-1">
+                <span>${qObj.q || ''}</span>
+              </div>
+              <div class="space-y-1 pl-3 text-slate-700">
+                ${answersHtml}
+              </div>
             </div>
-          </div>
-        `;
-        dqContainer.insertAdjacentHTML('beforeend', itemHtml);
-      });
+          `;
+        });
+      }
 
       // Page 2 Headers & Topics
-      document.getElementById('p2TopicText').innerText = data.page2.topic || data.topic;
+      document.getElementById('p2TopicText').innerText = data.page2?.topic || data.topic || '';
 
       // Render Today's Expressions
       const todaysContainer = document.getElementById('todaysExprContainer');
       todaysContainer.innerHTML = '';
-      data.page2.todaysExpressions.forEach((item, idx) => {
-        todaysContainer.innerHTML += `
-          <div class="flex items-start justify-between text-[11px]">
-            <div>
-              <span class="font-bold text-navy-900">${idx+1}. #${item.en}: ${item.kr}#</span>
-              <div class="text-slate-600 italic mt-0.5">${item.exampleEn} <span class="text-slate-400">(${item.exampleKr})</span></div>
+      if (data.page2 && Array.isArray(data.page2.todaysExpressions)) {
+        data.page2.todaysExpressions.forEach((item, idx) => {
+          todaysContainer.innerHTML += `
+            <div class="flex items-start justify-between text-[11px]">
+              <div>
+                <span class="font-bold text-navy-900">${idx+1}. #${item.en || ''}: ${item.kr || ''}#</span>
+                <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+              </div>
+              <span class="checkbox-square"></span>
             </div>
-            <span class="checkbox-square"></span>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
 
       // Render Review Expressions
       const reviewContainer = document.getElementById('reviewExprContainer');
       reviewContainer.innerHTML = '';
-      data.page2.reviewExpressions.forEach((item, idx) => {
-        reviewContainer.innerHTML += `
-          <div class="flex items-start justify-between text-[11px]">
-            <div>
-              <span class="font-bold text-navy-900">${idx+1}. #${item.en}: ${item.kr}#</span>
-              <div class="text-slate-600 italic mt-0.5">${item.exampleEn} <span class="text-slate-400">(${item.exampleKr})</span></div>
+      if (data.page2 && Array.isArray(data.page2.reviewExpressions)) {
+        data.page2.reviewExpressions.forEach((item, idx) => {
+          reviewContainer.innerHTML += `
+            <div class="flex items-start justify-between text-[11px]">
+              <div>
+                <span class="font-bold text-navy-900">${idx+1}. #${item.en || ''}: ${item.kr || ''}#</span>
+                <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+              </div>
+              <span class="checkbox-square"></span>
             </div>
-            <span class="checkbox-square"></span>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
 
       // Render Story Text with highlighting for #expressions#
-      let highlightedStory = data.page2.storyText.replace(/#([^#]+)#/g, '<span class="highlight-expr">$1</span>');
+      const rawStory = data.page2?.storyText || '';
+      let highlightedStory = rawStory.replace(/#([^#]+)#/g, '<span class="highlight-expr">$1</span>');
       document.getElementById('essayStoryContainer').innerHTML = `
         <div class="font-semibold text-navy-900 text-xs mb-1.5 flex items-center gap-1.5 font-jakarta">
           <i class="fa-solid fa-book-open text-skybrand-600"></i> Essay Narrative Story
@@ -611,20 +620,22 @@
       // Render Essay Questions
       const essayQContainer = document.getElementById('essayQuestionsContainer');
       essayQContainer.innerHTML = '';
-      data.page2.questions.forEach((qObj) => {
-        essayQContainer.innerHTML += `
-          <div class="flex items-start justify-between text-[11px] py-1 border-b border-slate-100">
-            <div class="pr-2">
-              <div class="font-semibold text-navy-900">${qObj.q}</div>
-              <div class="text-slate-500 flex items-center gap-2 mt-0.5">
-                <span class="text-skybrand-700 font-bold">&gt; #${qObj.expr}#</span>
-                <span>${qObj.qKr}</span>
+      if (data.page2 && Array.isArray(data.page2.questions)) {
+        data.page2.questions.forEach((qObj) => {
+          essayQContainer.innerHTML += `
+            <div class="flex items-start justify-between text-[11px] py-1 border-b border-slate-100">
+              <div class="pr-2">
+                <div class="font-semibold text-navy-900">${qObj.q || ''}</div>
+                <div class="text-slate-500 flex items-center gap-2 mt-0.5">
+                  <span class="text-skybrand-700 font-bold">&gt; #${qObj.expr || ''}#</span>
+                  <span>${qObj.qKr || ''}</span>
+                </div>
               </div>
+              <span class="checkbox-square mt-0.5"></span>
             </div>
-            <span class="checkbox-square mt-0.5"></span>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
     }
 
     // Gemini API is called through the server; no API key is stored in the browser.
@@ -656,7 +667,6 @@
         }
 
         renderWorksheet(result.data);
-        // 생성 후 DB 히스토리를 다시 불러와서 보관함 갱신
         loadHistoryFromStorage();
         showToast('AI 학습지가 성공적으로 생성 및 저장되었습니다.', 'success');
       } catch (error) {
@@ -668,31 +678,38 @@
       }
     }
 
-    // 📌 Neon DB 서버 API(`/api/get-worksheets`)에서 히스토리를 불러오도록 연동된 함수
+    // 📌 서버 DB 데이터를 안전하게 파싱하여 히스토리에 반영하는 함수
     async function loadHistoryFromStorage() {
       try {
         const response = await fetch('/api/get-worksheets');
         const result = await response.json();
         
         if (result.success && Array.isArray(result.data)) {
-          historyStore = result.data.map(item => ({
-            id: String(item.id),
-            topic: item.topic,
-            weekInfo: item.target_date,
-            date: item.created_at,
-            page1: item.page1_data,
-            page2: item.page2_data
-          }));
+          historyStore = result.data.map(item => {
+            let p1 = item.page1_data;
+            let p2 = item.page2_data;
+            if (typeof p1 === 'string') { try { p1 = JSON.parse(p1); } catch(e) { p1 = null; } }
+            if (typeof p2 === 'string') { try { p2 = JSON.parse(p2); } catch(e) { p2 = null; } }
+
+            return {
+              id: String(item.id),
+              topic: item.topic || 'Untitled Topic',
+              weekInfo: item.target_date || getFormattedKoreanDate(),
+              date: item.created_at || new Date().toISOString(),
+              page1: p1 || { title: "Daily Talk & Share", subTopic: item.topic, questions: [] },
+              page2: p2 || { topic: item.topic, todaysExpressions: [], reviewExpressions: [], storyText: "", questions: [] }
+            };
+          });
+
           renderHistoryList();
           
-          // 데이터가 존재하고 현재 선택된 데이터가 없을 경우 가장 최근 항목 자동 렌더링
           if (historyStore.length > 0 && !currentData) {
             renderWorksheet(historyStore[0]);
           } else if (historyStore.length === 0) {
             renderWorksheet(SAMPLE_DATA);
           }
         } else {
-          throw new Error('Failed to load worksheets from server');
+          throw new Error('Invalid server response format');
         }
       } catch (error) {
         console.error('Failed to load history from server, fallback to sample data:', error);
@@ -779,13 +796,15 @@
       if (!currentData) return;
       let text = `# English Community Worksheets: ${currentData.weekInfo} - ${currentData.topic}\n\n`;
       text += `## PAGE 1: Daily Talk & Share\n`;
-      currentData.page1.questions.forEach(q => {
-        text += `${q.q}\n`;
-        q.answers.forEach(a => text += `- ${a.en} (${a.kr})\n`);
-      });
+      if (currentData.page1 && currentData.page1.questions) {
+        currentData.page1.questions.forEach(q => {
+          text += `${q.q}\n`;
+          if (q.answers) q.answers.forEach(a => text += `- ${a.en} (${a.kr})\n`);
+        });
+      }
 
       text += `\n## PAGE 2: Essay Topic\n`;
-      text += `Story: ${currentData.page2.storyText}\n`;
+      text += `Story: ${currentData.page2?.storyText || ''}\n`;
 
       navigator.clipboard.writeText(text);
       showToast('마크다운 텍스트가 클립보드에 복사되었습니다!', 'success');
