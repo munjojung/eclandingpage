@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>English Community Daily Worksheet Generator - DB 삭제 연동 통합</title>
+  <title>English Community Daily Worksheet Generator - 보안 강화 통합 버전</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,11 +51,17 @@
             English Community
             <span class="bg-skybrand-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase">Daily Worksheet</span>
           </h1>
-          <p class="text-xs text-sky-200/70">gemini-3.8-flash 및 Vercel DB 삭제 연동 버전</p>
+          <p class="text-xs text-sky-200/70">gemini-3.8-flash 및 관리자 보안 인증 강화 버전</p>
         </div>
       </div>
-      <div class="text-xs text-emerald-400 font-medium flex items-center gap-1.5 bg-emerald-950/50 px-3 py-1.5 rounded-lg border border-emerald-800/50">
-        <i class="fa-solid fa-shield-halved"></i> Vercel DB 삭제 연동 활성화
+      <div class="flex items-center gap-2">
+        <button onclick="openAuthModal()" class="text-xs text-slate-300 hover:text-white bg-navy-800 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-lock text-amber-400"></i>
+          <span>비밀번호 관리</span>
+        </button>
+        <div class="text-xs text-emerald-400 font-medium flex items-center gap-1.5 bg-emerald-950/50 px-3 py-1.5 rounded-lg border border-emerald-800/50">
+          <i class="fa-solid fa-shield-halved"></i> Vercel 보안 연동됨
+        </div>
       </div>
     </div>
   </header>
@@ -87,7 +93,7 @@
         </div>
 
         <div class="flex flex-col gap-2 pt-2">
-          <button id="btnGenerate" onclick="generateWorksheetWithVercelAPI()" class="w-full py-2.5 bg-gradient-to-r from-navy-900 to-skybrand-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 text-sm">
+          <button id="btnGenerate" onclick="startGenerationWithAuthCheck()" class="w-full py-2.5 bg-gradient-to-r from-navy-900 to-skybrand-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 text-sm">
             <i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i>
             <span>Vercel AI 학습지 생성</span>
           </button>
@@ -194,6 +200,24 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- 관리자 비밀번호 인증 모달 -->
+  <div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-navy-900 text-base flex items-center gap-2 font-jakarta">
+          <i class="fa-solid fa-user-shield text-skybrand-600"></i> 관리자 인증
+        </h3>
+        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p class="text-xs text-slate-500">Vercel AI 학습지 생성을 위해 관리자 비밀번호를 입력해 주세요.</p>
+      <input type="password" id="adminPasswordInput" placeholder="비밀번호 입력..." onkeyup="if(event.key==='Enter') confirmAuthAndGenerate()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+      <div class="flex justify-end gap-2 pt-1">
+        <button onclick="closeAuthModal()" class="px-3.5 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">취소</button>
+        <button onclick="confirmAuthAndGenerate()" class="px-4 py-2 text-xs bg-navy-900 text-white rounded-lg hover:bg-slate-800 transition">확인 및 생성</button>
+      </div>
+    </div>
   </div>
 
   <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs no-print">
@@ -395,7 +419,38 @@
       });
     }
 
-    async function generateWorksheetWithVercelAPI() {
+    // 🔒 비밀번호 확인 후 생성 트리거
+    function startGenerationWithAuthCheck() {
+      const savedPw = sessionStorage.getItem('admin_pwd') || '';
+      if (!savedPw) {
+        openAuthModal();
+      } else {
+        generateWorksheetWithVercelAPI(savedPw);
+      }
+    }
+
+    function openAuthModal() {
+      document.getElementById('authModal').classList.remove('hidden');
+      document.getElementById('adminPasswordInput').focus();
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function confirmAuthAndGenerate() {
+      const pwInput = document.getElementById('adminPasswordInput').value.trim();
+      if (!pwInput) {
+        alert('비밀번호를 입력해 주세요.');
+        return;
+      }
+      sessionStorage.setItem('admin_pwd', pwInput);
+      closeAuthModal();
+      generateWorksheetWithVercelAPI(pwInput);
+    }
+
+    async function generateWorksheetWithVercelAPI(pwd) {
+      const adminPassword = pwd || sessionStorage.getItem('admin_pwd') || '';
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Travel & Cultures';
       const targetDate = document.getElementById('targetDateInput').value || new Date().toISOString().split('T')[0];
       const weekInfo = getFormattedKoreanDate(targetDate);
@@ -416,12 +471,17 @@
             weekInfo: weekInfo,
             target_date: targetDate,
             sequence: sequence,
-            file_name: fileName
+            file_name: fileName,
+            adminPassword: adminPassword
           })
         });
 
         const result = await response.json();
         if (!response.ok || !result.success) {
+          if (response.status === 401) {
+            sessionStorage.removeItem('admin_pwd');
+            openAuthModal();
+          }
           throw new Error(result.error || `서버 오류 발생 (${response.status})`);
         }
 
@@ -565,26 +625,23 @@
       });
     }
 
-    // 📌 Vercel DB 및 로컬 저장소 동시 삭제 연동 함수
     async function deleteHistoryItem(id, fileName) {
       if (!confirm('정말 삭제하시겠습니까? Vercel DB에서도 함께 삭제됩니다.')) return;
 
       try {
-        // Vercel DB 삭제 API 호출
         await fetch('/api/delete-worksheet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, file_name: fileName })
         });
       } catch (err) {
-        console.warn('DB 삭제 요청 처리 중 오류가 발생했으나 로컬 보관함 삭제를 진행합니다.', err);
+        console.warn('DB 삭제 요청 처리 중 오류가 발생했습니다.', err);
       }
 
-      // 로컬 히스토리 삭제 및 갱신
       historyStore = historyStore.filter(i => i.id !== id);
       localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
       renderHistoryList();
-      showToast('성공적으로 삭제되었습니다 (DB & 로컬 보관함).', 'info');
+      showToast('성공적으로 삭제되었습니다.', 'info');
     }
 
     function selectHistoryItem(id) {

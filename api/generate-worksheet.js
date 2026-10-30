@@ -6,14 +6,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { topic, weekInfo, target_date, sequence, file_name } = req.body;
+    const { topic, weekInfo, target_date, sequence, file_name, adminPassword } = req.body;
+    
+    // Vercel 환경 변수에 설정된 ADMIN_PASSWORD 검증
+    const correctPassword = process.env.ADMIN_PASSWORD ? process.env.ADMIN_PASSWORD.trim() : '';
+    if (correctPassword && adminPassword !== correctPassword) {
+      return res.status(401).json({ success: false, error: '관리자 비밀번호가 올바르지 않습니다. 권한이 없습니다.' });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '';
 
     if (!apiKey) {
       return res.status(500).json({ success: false, error: 'Vercel에 GEMINI_API_KEY 환경 변수가 설정되어 있지 않습니다.' });
     }
 
-    // 📌 정확히 10문항씩 생성하도록 요청하는 프롬프트
     const prompt = `You are an expert English curriculum writer for "English Community". 
 Create a professional 2-page learning worksheet strictly based on: "${topic}".
 
@@ -64,7 +70,6 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
   }
 }`;
 
-    // 요청하신 gemini-3.8-flash 모델 유지 및 트래픽 폭증 대응 자동 재시도 로직
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
     let geminiRes;
@@ -85,7 +90,6 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
 
       const errorMessage = resultData.error?.message || '';
       if (attempt < maxRetries && (geminiRes.status === 503 || errorMessage.includes('high demand'))) {
-        console.warn(`Attempt ${attempt} failed due to high demand. Retrying in 2 seconds...`);
         await new Promise(resolve => setTimeout(resolve, 2000));
         continue;
       }
