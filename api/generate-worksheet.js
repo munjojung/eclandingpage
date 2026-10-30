@@ -1,6 +1,4 @@
 // api/generate-worksheet.js
-import { GoogleGenAI } from '@google/genai';
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -9,15 +7,11 @@ export default async function handler(req, res) {
 
   try {
     const { topic, weekInfo, target_date, sequence, file_name } = req.body;
-    
-    // Vercel 환경 변수(GEMINI_API_KEY) 연동
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return res.status(500).json({ success: false, error: 'Vercel 환경 변수(GEMINI_API_KEY)가 설정되어 있지 않습니다.' });
     }
-
-    const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `You are an expert English curriculum writer for "English Community". 
 Create a professional 2-page learning worksheet strictly based on: "${topic}".
@@ -42,14 +36,24 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
   }
 }`;
 
-    // 반드시 gemini-3.8-flash 모델 사용
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
+    // 요청하신 gemini-3.8-flash 모델을 사용하여 Google REST API 직접 호출
+    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
     });
 
-    let rawText = response.text || '';
+    const resultData = await geminiRes.json();
+
+    if (!geminiRes.ok) {
+      throw new Error(resultData.error?.message || `Gemini API 오류 발생 (${geminiRes.status})`);
+    }
+
+    let rawText = resultData.candidates?.[0]?.content?.parts?.[0]?.text || '';
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    
     const parsedJSON = JSON.parse(rawText);
 
     return res.status(200).json({ success: true, data: parsedJSON });
