@@ -7,10 +7,13 @@ export default async function handler(req, res) {
 
   try {
     const { topic, weekInfo, target_date, sequence, file_name } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+    
+    // 환경 변수 키 가져오기 (공백 제거)
+    const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '';
 
     if (!apiKey) {
-      return res.status(500).json({ success: false, error: 'Vercel 환경 변수(GEMINI_API_KEY)가 설정되어 있지 않습니다.' });
+      console.error('API Key Error: GEMINI_API_KEY is missing in Vercel environment variables.');
+      return res.status(500).json({ success: false, error: 'Vercel에 GEMINI_API_KEY 환경 변수가 설정되어 있지 않습니다.' });
     }
 
     const prompt = `You are an expert English curriculum writer for "English Community". 
@@ -36,19 +39,26 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
   }
 }`;
 
-    // 요청하신 gemini-3.8-flash 모델을 사용하여 Google REST API 직접 호출
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+    // 사용자가 요청하신 gemini-3.8-flash 모델 유지
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+
+    const geminiRes = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [
+          {
+            parts: [{ text: prompt }]
+          }
+        ]
       })
     });
 
     const resultData = await geminiRes.json();
 
     if (!geminiRes.ok) {
-      throw new Error(resultData.error?.message || `Gemini API 오류 발생 (${geminiRes.status})`);
+      console.error('Google Gemini API Response Error:', JSON.stringify(resultData));
+      throw new Error(resultData.error?.message || `Gemini API 오류 발생 (상태 코드: ${geminiRes.status})`);
     }
 
     let rawText = resultData.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -58,7 +68,7 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
 
     return res.status(200).json({ success: true, data: parsedJSON });
   } catch (error) {
-    console.error('Gemini API Error:', error);
-    return res.status(500).json({ success: false, error: error.message || 'AI 학습지 생성 중 오류가 발생했습니다.' });
+    console.error('Server Catch Error:', error);
+    return res.status(500).json({ success: false, error: error.message || 'AI 학습지 생성 중 서버 내부 오류가 발생했습니다.' });
   }
 }
