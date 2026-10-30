@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF 뷰어 - 지정 폴더 및 PDF 파일 브라우저</title>
+  <title>PDF 뷰어 - Vercel DB 연동 및 지정 폴더 자동 열기</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome Icons -->
@@ -19,28 +19,25 @@
   <!-- Top Control Bar -->
   <header class="bg-white border-b border-slate-300 shadow-sm sticky top-0 z-50 py-3 w-full flex flex-col gap-2 px-4">
     
-    <!-- Row 1: 폴더 경로 및 파일 선택 컨트롤 -->
+    <!-- Row 1: Vercel DB 연동 및 폴더 자동 열기 -->
     <div class="max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-100 pb-2">
       <div class="flex items-center gap-2 overflow-hidden flex-1">
-        <i class="fa-solid fa-folder-tree text-sky-600 flex-shrink-0"></i>
-        <span class="font-semibold text-slate-700 flex-shrink-0">지정 저장 폴더:</span>
+        <i class="fa-solid fa-database text-sky-600 flex-shrink-0"></i>
+        <span class="font-semibold text-slate-700 flex-shrink-0">DB 연동 경로:</span>
         <input type="text" id="defaultPathDisplay" readonly class="px-2 py-1 bg-slate-50 border border-slate-300 rounded-md text-slate-600 flex-1 font-mono text-xs" value="C:\Users\Quito\Documents\private_pdfs">
       </div>
       
       <div class="flex items-center gap-2 flex-shrink-0">
-        <label class="cursor-pointer bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5">
-          <i class="fa-solid fa-folder-open"></i>
-          <span>폴더 내 PDF 열기</span>
-          <input type="file" id="localFileInput" accept="application/pdf" multiple class="hidden">
-        </label>
-        <span id="fileNameDisplay" class="text-slate-500 italic max-w-[150px] truncate">선택된 파일 없음</span>
+        <button onclick="openFirstFileFromDbFolder()" class="bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5">
+          <i class="fa-solid fa-file-arrow-down"></i>
+          <span>DB 연동 첫 번째 파일 열기</span>
+        </button>
+        <span id="fileNameDisplay" class="text-slate-500 italic max-w-[180px] truncate">DB 목록 로딩 중...</span>
       </div>
     </div>
 
-    <!-- Row 2: 페이지 및 줌 컨트롤 (중앙 정렬) -->
+    <!-- Row 2: 페이지 및 줌 컨트롤 -->
     <div class="max-w-6xl mx-auto w-full flex items-center justify-center gap-3 text-xs flex-nowrap overflow-x-auto pt-1">
-      
-      <!-- 1. Page Navigation -->
       <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-300 px-2.5 py-1.5 rounded flex-shrink-0">
         <span class="font-medium text-slate-600 mr-0.5">페이지</span>
         <input type="number" id="pageNumInput" value="1" min="1" class="w-12 text-center border border-slate-300 rounded py-0.5 font-mono">
@@ -54,14 +51,12 @@
         </button>
       </div>
 
-      <!-- 2. Zoom Controls -->
       <div class="flex items-center gap-1 bg-slate-50 border border-slate-300 px-2 py-1.5 rounded flex-shrink-0">
         <button id="zoomOut" class="w-7 h-7 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 font-bold transition">-</button>
         <span id="zoomLevel" class="w-12 text-center font-mono font-medium text-slate-600">100%</span>
         <button id="zoomIn" class="w-7 h-7 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 font-bold transition">+</button>
         <button id="zoomToggleBtn" class="ml-1 px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition font-medium">폭 맞춤</button>
       </div>
-
     </div>
   </header>
 
@@ -70,10 +65,9 @@
     <div id="pdfContainer" class="bg-white border border-slate-300 shadow-md rounded p-4 relative flex items-center justify-center min-h-[700px] w-full max-w-4xl">
       <canvas id="pdfCanvas" class="shadow"></canvas>
       
-      <!-- Loading Indicator -->
       <div id="loadingOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-20">
         <i class="fa-solid fa-spinner fa-spin text-sky-600 text-3xl"></i>
-        <p class="text-xs text-slate-600 font-medium" id="loadingText">지정 폴더의 기본 PDF를 불러오는 중입니다...</p>
+        <p class="text-xs text-slate-600 font-medium" id="loadingText">Vercel DB에서 파일 목록을 불러오는 중입니다...</p>
       </div>
     </div>
   </main>
@@ -83,7 +77,8 @@
     let pageNum = 1;
     let pageRendering = false;
     let pageNumPending = null;
-    let scale = 1.0; 
+    let scale = 1.0;
+    let dbFileList = []; 
     
     const canvas = document.getElementById('pdfCanvas');
     const ctx = canvas.getContext('2d');
@@ -96,52 +91,102 @@
     const zoomToggleBtn = document.getElementById('zoomToggleBtn');
     const defaultPathDisplay = document.getElementById('defaultPathDisplay');
 
-    // 페이지 로드 시 download.html에서 저장한 폴더 경로 불러오기
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       const savedPath = localStorage.getItem('ec_download_path');
       if (savedPath) {
         defaultPathDisplay.value = savedPath;
       }
-      
-      // 초기 기본 PDF 로드 (동일 경로 또는 루트의 ABC.pdf)
-      loadPdf('./ABC.pdf');
+
+      // Vercel DB API를 통해 목록 조회
+      await fetchDbFiles();
     });
 
-    // 로컬 파일 선택 시 처리 (지정 폴더 내 PDF 파일 렌더링)
-    document.getElementById('localFileInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (file && file.type === 'application/pdf') {
-        fileNameDisplay.textContent = file.name;
-        fileNameDisplay.title = file.name;
+    async function fetchDbFiles() {
+      try {
+        const res = await fetch('/api/worksheets'); // Vercel DB 연동 API 엔드포인트
+        const data = await res.json();
         
-        const fileReader = new FileReader();
-        loadingOverlay.classList.remove('hidden');
-        loadingText.textContent = `지정 폴더의 파일(${file.name})을 불러오는 중입니다...`;
-
-        fileReader.onload = function() {
-          const typedarray = new Uint8Array(this.result);
-          loadPdfData(typedarray);
-        };
-        fileReader.readAsArrayBuffer(file);
+        if (res.ok && data) {
+          dbFileList = Array.isArray(data) ? data : (data.items || data.worksheets || []);
+          if (dbFileList.length > 0) {
+            fileNameDisplay.textContent = `DB 연동됨 (${dbFileList.length개 항목})`;
+            loadingText.textContent = `DB 목록 로드 완료. [DB 연동 첫 번째 파일 열기] 버튼을 눌러주세요.`;
+            loadingOverlay.classList.add('hidden');
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('DB API fetch fallback to localStorage:', err);
       }
-    });
 
-    // PDF 로드 함수 (URL 방식)
-    function loadPdf(url) {
-      loadingOverlay.classList.remove('hidden');
-      pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
-        pdfDoc = pdfDoc_;
-        pageCountElem.textContent = pdfDoc.numPages;
-        pageNum = 1;
-        renderPage(pageNum);
+      // API 실패 시 localStorage 백업 데이터 활용
+      const stored = localStorage.getItem('ec_worksheet_history');
+      if (stored) {
+        try {
+          dbFileList = JSON.parse(stored);
+        } catch(e) { dbFileList = []; }
+      }
+
+      if (dbFileList.length > 0) {
+        fileNameDisplay.textContent = `캐시 연동됨 (${dbFileList.length개)`;
+        loadingText.textContent = `목록 로드 완료. [DB 연동 첫 번째 파일 열기] 버튼을 눌러주세요.`;
         loadingOverlay.classList.add('hidden');
-      }).catch(function(error) {
-        console.error('PDF Load Error:', error);
-        loadingText.innerHTML = `<span class="text-rose-500">PDF 파일을 불러오지 못했습니다.<br>상단 [폴더 내 PDF 열기] 버튼을 눌러 파일을 선택해 주세요.</span>`;
-      });
+      } else {
+        fileNameDisplay.textContent = '등록된 항목 없음';
+        loadingText.innerHTML = `<span class="text-rose-500">Vercel DB에 등록된 항목이 없습니다.</span>`;
+      }
     }
 
-    // PDF 로드 함수 (바이너리 데이터 방식)
+    // Vercel DB 목록의 첫 번째 파일 열기
+    async function openFirstFileFromDbFolder() {
+      if (dbFileList.length === 0) {
+        alert('DB에서 불러온 파일 목록이 없습니다.');
+        return;
+      }
+
+      const firstItem = dbFileList[0];
+      console.log('DB 첫 번째 항목:', firstItem);
+
+      try {
+        if (!window.showDirectoryPicker) {
+          alert('이 브라우저는 폴더 접근 API를 지원하지 않습니다.');
+          return;
+        }
+
+        loadingOverlay.classList.remove('hidden');
+        loadingText.textContent = `지정 폴더(private_pdfs)에 접근합니다...`;
+
+        // 사용자가 C:\Users\Quito\Documents\private_pdfs 폴더를 선택할 수 있도록 창 오픈
+        const dirHandle = await window.showDirectoryPicker();
+        let targetFileHandle = null;
+
+        for await (const entry of dirHandle.values()) {
+          if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
+            targetFileHandle = entry;
+            break; // 폴더 내 첫 번째 PDF 파일 지정
+          }
+        }
+
+        if (!targetFileHandle) {
+          alert('선택하신 폴더 내에 PDF 파일이 존재하지 않습니다.');
+          loadingOverlay.classList.add('hidden');
+          return;
+        }
+
+        const file = await targetFileHandle.getFile();
+        fileNameDisplay.textContent = file.name;
+        fileNameDisplay.title = file.name;
+        loadingText.textContent = `파일(${file.name})을 읽어오는 중입니다...`;
+
+        const arrayBuffer = await file.arrayBuffer();
+        loadPdfData(new Uint8Array(arrayBuffer));
+
+      } catch (err) {
+        console.warn('Directory picker cancelled or error:', err);
+        loadingOverlay.classList.add('hidden');
+      }
+    }
+
     function loadPdfData(data) {
       pdfjsLib.getDocument({ data: data }).promise.then(function(pdfDoc_) {
         pdfDoc = pdfDoc_;
@@ -155,7 +200,6 @@
       });
     }
 
-    // 페이지 렌더링
     function renderPage(num) {
       pageRendering = true;
       pdfDoc.getPage(num).then(function(page) {
@@ -189,7 +233,6 @@
       }
     }
 
-    // 이벤트 리스너 연결
     document.getElementById('prevPage').addEventListener('click', () => {
       if (pageNum <= 1) return;
       pageNum--;
@@ -212,7 +255,6 @@
       }
     });
 
-    // 확대 / 축소
     document.getElementById('zoomIn').addEventListener('click', () => {
       scale = Math.min(scale + 0.2, 5.0);
       zoomToggleBtn.textContent = "폭 맞춤";
@@ -225,7 +267,6 @@
       queueRenderPage(pageNum);
     });
 
-    // 폭 맞춤 토글
     zoomToggleBtn.addEventListener('click', () => {
       if (!pdfDoc) return;
 
