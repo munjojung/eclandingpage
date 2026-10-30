@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>English Community Daily Worksheet Generator</title>
+  <title>English Community Daily Worksheet Generator - 원클릭 통합</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
@@ -23,18 +23,8 @@
             jakarta: ['Plus Jakarta Sans', 'sans-serif'],
           },
           colors: {
-            navy: {
-              800: '#1e293b',
-              900: '#0f172a',
-              950: '#080d1a',
-            },
-            skybrand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0ea5e9',
-              600: '#0284c7',
-              700: '#0369a1',
-            }
+            navy: { 800: '#1e293b', 900: '#0f172a', 950: '#080d1a' },
+            skybrand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' }
           }
         }
       }
@@ -42,85 +32,37 @@
   </script>
 
   <style>
-    /* Print Styles */
     @media print {
-      body {
-        background: white !important;
-        color: black !important;
-        font-size: 10pt;
-      }
-      .no-print {
-        display: none !important;
-      }
-      .print-container {
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 100% !important;
-        max-width: none !important;
-        box-shadow: none !important;
-      }
-      .page-break {
-        page-break-before: always;
-        break-before: page;
-      }
-      .worksheet-page {
-        border: none !important;
-        padding: 12mm 15mm !important;
-        min-height: 297mm;
-        box-shadow: none !important;
-      }
+      body { background: white !important; color: black !important; font-size: 10pt; }
+      .no-print { display: none !important; }
+      .print-container { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; box-shadow: none !important; }
+      .page-break { page-break-before: always; break-before: page; }
+      .worksheet-page { border: none !important; padding: 12mm 15mm !important; min-height: 297mm; box-shadow: none !important; }
     }
-
-    /* Custom Checkbox UI */
-    .checkbox-square {
-      width: 13px;
-      height: 13px;
-      border: 1.5px solid #0284c7;
-      display: inline-block;
-      margin-right: 6px;
-      flex-shrink: 0;
-      border-radius: 2px;
-      margin-top: 3px;
-    }
-
-    /* Highlight hashtag expressions like #expression# */
-    .highlight-expr {
-      background-color: #e0f2fe;
-      padding: 1px 4px;
-      border-radius: 4px;
-      font-weight: 700;
-      color: #0369a1;
-      border: 1px solid #bae6fd;
-    }
+    .checkbox-square { width: 13px; height: 13px; border: 1.5px solid #0284c7; display: inline-block; margin-right: 6px; flex-shrink: 0; border-radius: 2px; margin-top: 3px; }
+    .highlight-expr { background-color: #e0f2fe; padding: 1px 4px; border-radius: 4px; font-weight: 700; color: #0369a1; border: 1px solid #bae6fd; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
 
-  <!-- TOP HEADER / NAV BAR (NO-PRINT) -->
+  <!-- TOP HEADER / NAV BAR -->
   <header class="bg-navy-900 text-white shadow-lg sticky top-0 z-50 no-print border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 bg-gradient-to-tr from-skybrand-600 to-cyan-400 rounded-xl flex items-center justify-center text-white font-bold font-jakarta text-lg shadow-md tracking-tighter">
-          EC
-        </div>
+        <div class="w-10 h-10 bg-gradient-to-tr from-skybrand-600 to-cyan-400 rounded-xl flex items-center justify-center text-white font-bold font-jakarta text-lg shadow-md">EC</div>
         <div>
           <h1 class="font-jakarta font-bold text-lg tracking-wide flex items-center gap-2 text-white">
             English Community
-            <span class="bg-skybrand-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Daily Worksheet</span>
+            <span class="bg-skybrand-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase">Daily Worksheet</span>
           </h1>
-          <p class="text-xs text-sky-200/70">Speak Freely, Connect Deeply. · 회화 & 에세이 2페이지 자동 생성기</p>
+          <p class="text-xs text-sky-200/70">날짜 + 순번 명명 규칙 자동 연동 버전</p>
         </div>
       </div>
 
-      <!-- Header Action Buttons -->
       <div class="flex items-center space-x-3">
         <button onclick="openApiKeyModal()" class="px-3 py-1.5 bg-navy-800 hover:bg-slate-800 text-xs text-slate-200 rounded-lg flex items-center space-x-2 border border-slate-700 transition">
           <i class="fa-solid fa-key text-amber-400"></i>
-          <span id="apiKeyBtnText">Gemini API 키 설정</span>
-        </button>
-        <button onclick="toggleAutoScheduler()" id="schedulerToggleBtn" class="px-3 py-1.5 bg-navy-800 hover:bg-slate-800 text-xs text-slate-200 rounded-lg flex items-center space-x-2 border border-slate-700 transition">
-          <i class="fa-solid fa-clock text-skybrand-500"></i>
-          <span>자동 생성 스케줄러</span>
+          <span>Gemini API 키 설정</span>
         </button>
       </div>
     </div>
@@ -129,17 +71,14 @@
   <!-- MAIN APP CONTAINER -->
   <div class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-6 gap-6">
 
-    <!-- SIDEBAR: GENERATOR & ARCHIVE (NO-PRINT) -->
+    <!-- SIDEBAR -->
     <aside class="w-full md:w-80 flex flex-col gap-6 no-print flex-shrink-0">
-      
-      <!-- CONTROLLER CARD -->
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col gap-4">
         <h2 class="font-bold text-navy-900 text-base flex items-center gap-2 font-jakarta">
           <i class="fa-solid fa-compass text-skybrand-600"></i>
-          주제별 학습지 생성 (10문항 완벽 구성)
+          주제별 학습지 생성 (10문항)
         </h2>
 
-        <!-- Topic Inputs -->
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">대화 및 에세이 주제</label>
           <div class="flex flex-col gap-2">
@@ -154,82 +93,61 @@
           </div>
         </div>
 
-        <!-- Mode / Date -->
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">발행일자</label>
-          <input type="text" id="weekInfoInput" placeholder="예: 2026년 10월 29일 수요일" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">발행일자 (Target Date)</label>
+          <input type="date" id="targetDateInput" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
         </div>
 
-        <!-- Generate Buttons -->
         <div class="flex flex-col gap-2 pt-2">
-          <button id="btnGenerate" onclick="generateWorksheetWithGemini()" class="w-full py-2.5 bg-gradient-to-r from-navy-900 to-skybrand-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg hover:opacity-95 transition flex items-center justify-center space-x-2 text-sm">
+          <button id="btnGenerate" onclick="generateWorksheetWithGemini()" class="w-full py-2.5 bg-gradient-to-r from-navy-900 to-skybrand-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 text-sm">
             <i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i>
-            <span>Gemini AI 10문항 2페이지 생성</span>
+            <span>Gemini AI 학습지 생성</span>
           </button>
           <button onclick="loadSampleData()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg transition flex items-center justify-center space-x-1">
             <i class="fa-solid fa-file-lines text-slate-500"></i>
-            <span>샘플 (Travel & Cultures) 불러오기</span>
+            <span>샘플 불러오기</span>
           </button>
         </div>
       </div>
 
-      <!-- ARCHIVE & HISTORY MANAGER -->
+      <!-- HISTORY -->
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex-1 flex flex-col min-h-[300px]">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-bold text-navy-900 text-sm flex items-center gap-2 font-jakarta">
-            <i class="fa-solid fa-folder-closed text-slate-500"></i>
-            생성 히스토리 보관함
+            <i class="fa-solid fa-folder-closed text-slate-500"></i> 생성 히스토리 보관함
           </h3>
           <span id="historyCount" class="text-xs font-semibold bg-skybrand-50 text-skybrand-700 px-2 py-0.5 rounded-full">0개</span>
         </div>
-
-        <!-- History Search -->
-        <div class="mb-3">
-          <input type="text" id="historySearch" onkeyup="filterHistory()" placeholder="주제어 검색..." class="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-skybrand-500">
-        </div>
-
-        <!-- History List Container -->
         <div id="historyList" class="flex-1 overflow-y-auto space-y-2 max-h-[320px] pr-1"></div>
       </div>
     </aside>
 
-    <!-- RIGHT MAIN CONTENT: PREVIEW & PRINT SECTION -->
+    <!-- RIGHT MAIN CONTENT -->
     <main class="flex-1 flex flex-col gap-4">
-
-      <!-- TOOLBAR: PAGE VIEW SWITCH & EXPORT OPTIONS (NO-PRINT) -->
       <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 no-print">
         <div class="flex items-center bg-slate-100 p-1 rounded-xl">
-          <button id="tabAll" onclick="switchTab('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-700 bg-white shadow-sm">
-            전체 (2페이지 보기)
-          </button>
-          <button id="tabPage1" onclick="switchTab('page1')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500 hover:text-slate-700">
-            Page 1 (Daily Talk & Share)
-          </button>
-          <button id="tabPage2" onclick="switchTab('page2')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500 hover:text-slate-700">
-            Page 2 (Essay Topic)
-          </button>
+          <button id="tabAll" onclick="switchTab('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-700 bg-white shadow-sm">전체 보기</button>
+          <button id="tabPage1" onclick="switchTab('page1')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500">Page 1</button>
+          <button id="tabPage2" onclick="switchTab('page2')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500">Page 2</button>
         </div>
 
         <div class="flex items-center space-x-2">
-          <button onclick="window.print()" class="px-3 py-1.5 bg-skybrand-600 hover:bg-skybrand-700 text-white text-xs font-medium rounded-lg shadow-sm transition flex items-center space-x-1">
-            <i class="fa-solid fa-print"></i>
-            <span>인쇄 / PDF 저장</span>
+          <button onclick="saveToLocalFolderOneClick()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg shadow-sm transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-bolt"></i>
+            <span>원클릭 폴더 저장 (날짜+순번)</span>
           </button>
-          <button onclick="copyContentAsMarkdown()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition flex items-center space-x-1">
-            <i class="fa-regular fa-copy"></i>
-            <span>텍스트 복사</span>
+          <button onclick="window.print()" class="px-3 py-1.5 bg-skybrand-600 hover:bg-skybrand-700 text-white text-xs font-medium rounded-lg transition">
+            <i class="fa-solid fa-print"></i> 인쇄
           </button>
-          <button onclick="exportJSON()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition flex items-center space-x-1">
-            <i class="fa-solid fa-download"></i>
-            <span>JSON 내보내기</span>
+          <button onclick="exportJSON()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition">
+            <i class="fa-solid fa-download"></i> JSON
           </button>
         </div>
       </div>
 
-      <!-- PRINTABLE CONTENT CONTAINER -->
+      <!-- PRINTABLE PREVIEW -->
       <div id="printableContent" class="print-container space-y-8">
-        
-        <!-- PAGE 1: DAILY TALK & SHARE SHEET -->
+        <!-- PAGE 1 -->
         <div id="page1View" class="worksheet-page bg-white p-8 md:p-10 rounded-2xl shadow-md border border-slate-200 text-slate-900 mx-auto max-w-[210mm] min-h-[297mm] flex flex-col justify-between relative">
           <div>
             <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
@@ -238,16 +156,13 @@
                 <p class="text-xs font-semibold text-skybrand-600 font-jakarta">Let's talk about <span id="p1TopicText">Travel & Cultures</span></p>
               </div>
               <div class="text-right flex flex-col items-end">
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta mb-1" id="p1WeekText">2026년 10월 29일 목요일</div>
-                <div class="text-xl font-black font-jakarta text-navy-900 tracking-wider">English Community</div>
-                <div class="text-[10px] text-skybrand-600 font-medium">Speak Freely, Connect Deeply.</div>
+                <div class="text-xs font-semibold text-slate-500 font-jakarta mb-1" id="p1WeekText">2026년 10월 30일 목요일</div>
+                <div class="text-xl font-black font-jakarta text-navy-900">English Community</div>
+                <div class="text-[10px] text-skybrand-600 font-medium" id="generatedFileNameDisplay">파일명: 대기 중</div>
               </div>
             </div>
-
-            <!-- 10 Questions Container -->
             <div id="dqQuestionsContainer" class="space-y-2.5 text-[11px] sm:text-xs"></div>
           </div>
-
           <div class="mt-6 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
             <span class="font-jakarta font-bold text-navy-900">English Community Academic Series</span>
             <span>Page 1 / 2</span>
@@ -256,7 +171,7 @@
 
         <div class="page-break"></div>
 
-        <!-- PAGE 2: ESSAY TOPIC SHEET -->
+        <!-- PAGE 2 -->
         <div id="page2View" class="worksheet-page bg-white p-8 md:p-10 rounded-2xl shadow-md border border-slate-200 text-slate-900 mx-auto max-w-[210mm] min-h-[297mm] flex flex-col justify-between relative">
           <div>
             <div class="border-b-2 border-navy-900 pb-3 mb-4 flex items-start justify-between">
@@ -265,34 +180,26 @@
                 <h2 class="text-xl font-extrabold font-jakarta text-navy-900 tracking-tight" id="p2TopicText">Travel & Cultures</h2>
               </div>
               <div class="text-right flex flex-col items-end">
-                <div class="text-xs font-semibold text-slate-500 uppercase tracking-widest font-jakarta mb-1" id="p2WeekText">2026년 10월 29일 목요일</div>
-                <div class="text-xl font-black font-jakarta text-navy-900 tracking-wider">English Community</div>
-                <div class="text-[10px] text-skybrand-600 font-medium">Speak Freely, Connect Deeply.</div>
+                <div class="text-xs font-semibold text-slate-500 font-jakarta mb-1" id="p2WeekText">2026년 10월 30일 목요일</div>
+                <div class="text-xl font-black font-jakarta text-navy-900">English Community</div>
               </div>
             </div>
 
-            <!-- Expressions Section -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 text-[11px]">
               <div class="bg-skybrand-50/50 p-2.5 rounded-lg border border-skybrand-100">
-                <div class="font-bold text-navy-900 mb-1 font-jakarta flex items-center gap-1">
-                  <span class="w-2 h-2 rounded-full bg-skybrand-600"></span> 오늘의 주요 표현
-                </div>
+                <div class="font-bold text-navy-900 mb-1 font-jakarta">오늘의 주요 표현</div>
                 <div id="todaysExprContainer" class="space-y-1"></div>
               </div>
               <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <div class="font-bold text-navy-900 mb-1 font-jakarta flex items-center gap-1">
-                  <span class="w-2 h-2 rounded-full bg-slate-500"></span> 복습 주요 표현
-                </div>
+                <div class="font-bold text-navy-900 mb-1 font-jakarta">복습 주요 표현</div>
                 <div id="reviewExprContainer" class="space-y-1"></div>
               </div>
             </div>
 
-            <!-- Essay Narrative Story -->
             <div class="mb-3 bg-slate-50 p-3 rounded-xl border border-slate-200 leading-relaxed text-[11px] text-slate-800" id="essayStoryContainer"></div>
 
-            <!-- 10 Essay Discussion Questions -->
             <div class="space-y-1 text-[11px]">
-              <div class="font-bold text-navy-900 mb-1 font-jakarta">☑ 아래 표현을 활용하여 대화하고 활용 후 체크해주세요.</div>
+              <div class="font-bold text-navy-900 mb-1 font-jakarta">☑ 아래 표현을 활용하여 대화하고 체크해주세요.</div>
               <div id="essayQuestionsContainer" class="grid grid-cols-1 gap-1"></div>
             </div>
           </div>
@@ -302,7 +209,6 @@
             <span>Page 2 / 2</span>
           </div>
         </div>
-
       </div>
     </main>
   </div>
@@ -316,28 +222,28 @@
         </h3>
         <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <p class="text-xs text-slate-600 leading-relaxed">Gemini API Key를 입력하세요. 브라우저 localStorage에 안전하게 저장됩니다.</p>
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">API Key</label>
-        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
-      </div>
+      <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-skybrand-500">
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeApiKeyModal()" class="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">취소</button>
-        <button onclick="saveApiKey()" class="px-4 py-2 text-xs bg-navy-900 hover:bg-slate-800 text-white font-medium rounded-lg shadow-sm">저장하기</button>
+        <button onclick="saveApiKey()" class="px-4 py-2 text-xs bg-navy-900 text-white rounded-lg">저장하기</button>
       </div>
     </div>
   </div>
 
   <!-- TOAST -->
-  <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs no-print border border-slate-800">
+  <div id="toast" class="fixed bottom-6 right-6 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 text-xs no-print">
     <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
     <span id="toastMsg">알림 메시지</span>
   </div>
 
-  <!-- APP LOGIC & SCRIPT -->
+  <!-- APP SCRIPT -->
   <script>
     let currentData = null;
     let historyStore = [];
+
+    const DB_NAME = 'PdfViewerDB';
+    const STORE_NAME = 'handles';
+    const HANDLE_KEY = 'private_pdfs_dir';
 
     function getFormattedKoreanDate(dateInput) {
       const d = dateInput ? new Date(dateInput) : new Date();
@@ -348,118 +254,50 @@
       return `${year}년 ${month}월 ${day}일 ${days[d.getDay()]}`;
     }
 
-    // PDF와 동일한 10문항 완벽 구성 샘플 데이터
+    function getYYYYMMDD(dateInput) {
+      const d = dateInput ? new Date(dateInput) : new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}${mm}${dd}`;
+    }
+
+    // 날짜별 순번 자동 계산 로직 (동일 날짜 생성 시 01, 02...)
+    function calculateSequenceNumber(targetDateStr) {
+      const dateKey = getYYYYMMDD(targetDateStr);
+      const existingToday = historyStore.filter(item => {
+        const itemDateKey = getYYYYMMDD(item.target_date || item.date);
+        return itemDateKey === dateKey;
+      });
+      const seq = existingToday.length + 1;
+      return String(seq).padStart(2, '0');
+    }
+
     const SAMPLE_DATA = {
       id: "sample-travel-01",
       date: new Date().toISOString(),
-      weekInfo: getFormattedKoreanDate(),
+      target_date: "2026-10-30",
+      weekInfo: getFormattedKoreanDate("2026-10-30"),
       topic: "Travel & Cultures",
       page1: {
         title: "Daily Talk & Share",
         subTopic: "Travel & Cultures",
         questions: [
-          {
-            q: "1. What is the most memorable foreign destination you have visited, and what made it so special?",
-            answers: [
-              { en: "Visiting Kyoto during the autumn season was unforgettable because of the historic temples surrounded by fiery red maple leaves.", kr: "단풍으로 물든 유서 깊은 사찰들이 너무 아름다워서 가을철 교토를 방문했던 것이 가장 기억에 남습니다." },
-              { en: "Barcelona left a huge impression on me thanks to Gaudi's breathtaking architecture and the vibrant street culture along Las Ramblas.", kr: "가우디의 웅장한 건축물과 람블라스 거리의 활기찬 거리 문화 덕분에 바르셀로나가 깊은 인상을 남겼습니다." }
-            ]
-          },
-          {
-            q: "2. How do you prepare yourself to respect local customs and etiquette before visiting a new country?",
-            answers: [
-              { en: "I always research basic dining manners, appropriate dress codes for sacred sites, and a few polite greeting phrases in the local language.", kr: "방문할 나라의 기본적인 식사 예절, 종교적 장소에서의 복장 규정, 현지 언어로 된 정중한 인사말을 항상 찾아봅니다." },
-              { en: "I watch travel vlogs created by locals to observe how people interact in everyday settings like public transport and markets.", kr: "대중교통이나 시장 등 일상적인 환경에서 사람들이 어떻게 행동하는지 관찰하기 위해 현지인이 제작한 여행 브이로그를 봅니다." }
-            ]
-          },
-          {
-            q: "3. Do you prefer exploring historic landmarks or enjoying modern city nightlife when traveling?",
-            answers: [
-              { en: "I lean toward historic landmarks because discovering ancient architecture gives me a deeper appreciation of the country.", kr: "고대 건축을 발견하면서 그 나라를 더 깊이 이해할 수 있기 때문에 역사적 명소를 탐방하는 것을 선호합니다." },
-              { en: "I prefer diving into the city nightlife because rooftop lounges and local night markets reveal the contemporary energy.", kr: "루프탑 라운지와 현지 야시장이 그 도시의 현대적인 활기를 잘 보여주기 때문에 밤 문화를 즐기는 것을 더 좋아합니다." }
-            ]
-          },
-          {
-            q: "4. What is the most exotic or unusual cultural food you have tried while traveling abroad?",
-            answers: [
-              { en: "I tried escargot in Paris, and although the texture was unfamiliar, the rich garlic butter sauce made it delicious.", kr: "파리에서 달팽이 요리를 먹어봤는데, 처음엔 식감이 낯설었지만 풍부한 갈릭 버터 소스 덕분에 맛있었습니다." },
-              { en: "I tasted durian in Southeast Asia, and while the strong scent was intimidating, the creamy flavor was quite unique.", kr: "동남아시아에서 두리안을 맛보았는데, 강한 향에 처음엔 주춤했지만 부드러운 풍미가 독특했습니다." }
-            ]
-          },
-          {
-            q: "5. How has experiencing different cultural perspectives through travel changed your daily mindset?",
-            answers: [
-              { en: "It taught me that there is no single 'right' way to live, making me far more open-minded when encountering differences.", kr: "삶에 정답은 하나가 아니라는 것을 배우면서, 일상에서 차이점을 마주할 때 훨씬 더 포용적인 태도를 갖게 되었습니다." },
-              { en: "Traveling showed me the beauty of slow-paced living, inspiring me to balance my work and personal rest more effectively.", kr: "여유로운 삶의 방식을 접하면서 일과 휴식의 균형을 더 건강하게 유지하려는 마음가짐을 갖게 되었습니다." }
-            ]
-          },
-          {
-            q: "6. What strategies do you use when communicating with locals who do not speak your language?",
-            answers: [
-              { en: "I rely on friendly body language, simple hand gestures, and translation apps on my smartphone.", kr: "친근한 몸짓, 간단한 손짓, 그리고 스마트폰 번역 앱을 적극적으로 활용합니다." },
-              { en: "A warm smile and a polite tone go a long way, and I often point to photos on menus when ordering food.", kr: "따뜻한 미소와 정중한 태도가 큰 도움이 되며, 음식을 주문할 때는 메뉴판 사진을 가리키곤 합니다." }
-            ]
-          },
-          {
-            q: "7. Would you rather embark on a solo adventure or travel in a guided group tour?",
-            answers: [
-              { en: "I prefer solo travel because it grants me the freedom to adjust my itinerary on a whim.", kr: "일정을 자유롭게 변경할 수 있는 자유가 있기 때문에 혼자 떠나는 배낭여행을 선호합니다." },
-              { en: "I prefer guided group tours because professional guides handle all logistics and provide in-depth historical context.", kr: "전문 가이드가 이동 일정을 책임져 주고 깊이 있는 역사적 해설을 들려주기 때문에 단체 투어를 선호합니다." }
-            ]
-          },
-          {
-            q: "8. What is a cultural tradition or festival from around the world that you would love to experience in person?",
-            answers: [
-              { en: "I would love to participate in Thailand's Yi Peng Lantern Festival to witness thousands of glowing lanterns.", kr: "수천 개의 은은한 등불이 밤하늘로 떠오르는 장관을 보기 위해 태국의 이펑 등불 축제에 참여하고 싶습니다." },
-              { en: "Experiencing Mexico's Day of the Dead festival is on my bucket list because celebrating deceased ancestors is inspiring.", kr: "조상들을 다채로운 색채로 기리는 문화가 인상 깊어서 멕시코의 망자의 날 축제를 경험하고 싶습니다." }
-            ]
-          },
-          {
-            q: "9. Do you enjoy venturing off the tourist trail, or do you feel safer sticking to popular landmarks?",
-            answers: [
-              { en: "I enjoy wandering down quiet alleys and visiting local neighborhood cafes where tourists rarely go.", kr: "관광객이 드문 한적한 골목길을 걷거나 동네 카페를 찾아가는 것을 즐깁니다." },
-              { en: "I stick to major landmarks because well-established tourist zones offer reliable public transit and better safety.", kr: "대중교통이 편리하고 치안이 안정적이기 때문에 검증된 유명 랜드마크를 주로 다닙니다." }
-            ]
-          },
-          {
-            q: "10. What is the most meaningful souvenir or keepsake you have brought back from a trip?",
-            answers: [
-              { en: "I bought a hand-painted ceramic bowl from an artisan in Florence, which reminds me of the craftsmanship.", kr: "피렌체의 공예 장인에게서 구입한 수제 도자기 그릇인데, 매일 아침 장인 정신을 떠올리게 합니다." },
-              { en: "A small collection of metro cards and ticket stubs kept in my travel journal serves as the best personal record.", kr: "일기장에 모아둔 지하철 카드와 입장권 티켓들이 저의 지난 여정을 보여주는 뜻깊은 기념품입니다." }
-            ]
-          }
+          { q: "1. What is the most memorable foreign destination you have visited?", answers: [{ en: "Visiting Kyoto during autumn was unforgettable.", kr: "단풍철 교토 방문이 가장 기억에 남습니다." }] }
         ]
       },
       page2: {
         topic: "Travel & Cultures",
-        todaysExpressions: [
-          { en: "immerse oneself in", kr: "~에 몰입하다, 깊이 빠져들다", exampleEn: "We had a chance to immerse ourselves in local traditions.", exampleKr: "우리는 현지 전통에 몰입할 기회를 가졌다." },
-          { en: "blend in", kr: "자연스럽게 어우러지다, 동화되다", exampleEn: "I tried my best to blend in by dressing modestly.", exampleKr: "나는 수수하게 옷을 입으며 현지에 동화되려 노력했다." },
-          { en: "off the beaten track", kr: "사람들의 발길이 뜸한, 잘 알려지지 않은 곳에", exampleEn: "We traveled off the beaten track into the mountains.", exampleKr: "우리는 인적이 드문 산속으로 여행을 떠났다." }
-        ],
-        reviewExpressions: [
-          { en: "culture shock", kr: "문화 충격", exampleEn: "The bustling medina caused a momentary sense of culture shock.", exampleKr: "복잡한 구시가지가 잠시 문화 충격을 주었다." },
-          { en: "broaden one's horizons", kr: "시야를 넓히다, 견문을 넓히다", exampleEn: "Travel is the most effective path to broaden one's horizons.", exampleKr: "여행은 견문을 넓히는 가장 효과적인 길이다." },
-          { en: "make memories", kr: "추억을 만들다", exampleEn: "Laughing across barriers allowed us to make wonderful memories.", exampleKr: "문화적 장벽을 넘어 웃으며 멋진 추억을 만들었다." }
-        ],
-        storyText: "Traveling is widely recognized as the most effective path to #broaden one's horizons# and gain deep appreciation for diverse traditions. When I first stepped into the crowded medina of Fes, the sensory overload caused a momentary sense of #culture shock#. Instead of staying isolated inside tourist enclaves, I tried my best to #blend in# by dressing modestly and practicing traditional greetings. Driven by curiosity, I traveled #off the beaten track# into the quiet foothills of the Atlas Mountains. There, a Berber family invited me into their stone cottage, providing a unique opportunity to #immerse oneself in# centuries-old customs such as hand-weaving textiles and brewing sweet mint tea. Laughing across cultural barriers allowed us to #make memories# that reshaped how I view global hospitality.",
-        questions: [
-          { q: "1. In what specific ways does interacting with foreign traditions help broaden one's horizons?", expr: "broaden one's horizons", qKr: "외국의 전통과 교류하는 것이 구체적으로 어떤 방식으로 사람의 시야를 넓혀주나요?" },
-          { q: "2. Can you describe an experience from your travels that truly helped broaden one's horizons?", expr: "broaden one's horizons", qKr: "당신의 여행 중 실제로 견문을 넓히는 데 큰 도움이 되었던 경험을 설명해 주시겠습니까?" },
-          { q: "3. What is the most memorable culture shock you have encountered, and how did you handle it?", expr: "culture shock", qKr: "지금까지 겪어본 가장 기억에 남는 문화 충격은 무엇이었으며, 어떻게 대처하셨나요?" },
-          { q: "4. Why do you think travelers often feel culture shock when visiting places with very different social etiquette?", expr: "culture shock", qKr: "사회적 예절이 매우 다른 지역을 방문할 때 여행자들이 종종 문화 충격을 느끼는 이유는 무엇일까요?" },
-          { q: "5. What steps do you take to blend in with local communities rather than sticking out as a tourist?", expr: "blend in", qKr: "눈에 띄는 관광객으로 남기보다 현지 공동체에 자연스럽게 동화되기 위해 어떤 노력을 기울이시나요?" },
-          { q: "6. Is it always necessary to blend in when traveling abroad, or is it acceptable to maintain your personal style?", expr: "blend in", qKr: "해외여행 시 현지 분위기에 무조건 어우러져야 할까요, 아니면 본인만의 방식을 유지해도 괜찮을까요?" },
-          { q: "7. What are the advantages and potential risks of traveling off the beaten track in unfamiliar countries?", expr: "off the beaten track", qKr: "낯선 나라에서 인적이 드물고 잘 알려지지 않은 곳을 여행할 때의 장점과 위험 요소는 무엇인가요?" },
-          { q: "8. Have you ever stumbled upon a memorable hidden spot while wandering off the beaten track?", expr: "off the beaten track", qKr: "인적이 드문 곳을 거닐다가 우연히 기억에 남는 숨은 명소를 발견한 적이 있으신가요?" },
-          { q: "9. How can a foreign traveler genuinely immerse oneself in the daily lifestyle of another culture?", expr: "immerse oneself in", qKr: "외국인 여행자가 타문화의 일상적인 삶의 방식에 진정으로 몰입하려면 어떻게 해야 할까요?" },
-          { q: "10. Which travel journey helped you make memories that you still cherish warmly today?", expr: "make memories", qKr: "오늘날까지도 따뜻하게 간직하고 있는 소중한 추억을 만들어준 여행은 어떤 여정이었나요?" }
-        ]
+        todaysExpressions: [{ en: "immerse oneself in", kr: "~에 몰입하다", exampleEn: "We immersed ourselves in local traditions.", exampleKr: "우리는 현지 전통에 몰입했다." }],
+        reviewExpressions: [{ en: "culture shock", kr: "문화 충격", exampleEn: "It caused mild culture shock.", exampleKr: "약간의 문화 충격을 주었다." }],
+        storyText: "Traveling helps #immerse oneself in# local cultures.",
+        questions: [{ q: "1. How do you immerse yourself?", expr: "immerse oneself in", qKr: "어떻게 몰입하시나요?" }]
       }
     };
 
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('weekInfoInput').value = getFormattedKoreanDate();
+      const todayIso = new Date().toISOString().split('T')[0];
+      document.getElementById('targetDateInput').value = todayIso;
       loadHistoryFromStorage();
       if (historyStore.length > 0) {
         renderWorksheet(historyStore[0]);
@@ -474,7 +312,7 @@
 
     function loadSampleData() {
       renderWorksheet(SAMPLE_DATA);
-      showToast('PDF 양식 10문항 샘플 데이터가 로드되었습니다.', 'success');
+      showToast('샘플 데이터가 로드되었습니다.', 'success');
     }
 
     function switchTab(mode) {
@@ -484,28 +322,17 @@
       const btnP1 = document.getElementById('tabPage1');
       const btnP2 = document.getElementById('tabPage2');
 
-      const activeClasses = ['bg-white', 'shadow-sm', 'text-slate-700'];
-      const inactiveClasses = ['text-slate-500', 'hover:text-slate-700'];
+      [p1, p2].forEach(el => el.classList.remove('hidden'));
+      [btnAll, btnP1, btnP2].forEach(b => { if(b) b.className = "px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-500"; });
 
-      [btnAll, btnP1, btnP2].forEach(btn => {
-        if (btn) {
-          btn.classList.remove(...activeClasses);
-          btn.classList.add(...inactiveClasses);
-        }
-      });
-
-      if (mode === 'all') {
-        if (p1) p1.classList.remove('hidden');
-        if (p2) p2.classList.remove('hidden');
-        if (btnAll) btnAll.classList.add(...activeClasses);
-      } else if (mode === 'page1') {
-        if (p1) p1.classList.remove('hidden');
-        if (p2) p2.classList.add('hidden');
-        if (btnP1) btnP1.classList.add(...activeClasses);
+      if (mode === 'page1') {
+        p2.classList.add('hidden');
+        btnP1.className = "px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-700 bg-white shadow-sm";
       } else if (mode === 'page2') {
-        if (p1) p1.classList.add('hidden');
-        if (p2) p2.classList.remove('hidden');
-        if (btnP2) btnP2.classList.add(...activeClasses);
+        p1.classList.add('hidden');
+        btnP2.className = "px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-700 bg-white shadow-sm";
+      } else {
+        btnAll.className = "px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-700 bg-white shadow-sm";
       }
     }
 
@@ -515,7 +342,8 @@
 
       const p1 = typeof data.page1 === 'string' ? JSON.parse(data.page1) : (data.page1 || {});
       const p2 = typeof data.page2 === 'string' ? JSON.parse(data.page2) : (data.page2 || {});
-      const weekText = data.weekInfo || data.target_date || getFormattedKoreanDate();
+      const targetDate = data.target_date || new Date().toISOString().split('T')[0];
+      const weekText = data.weekInfo || getFormattedKoreanDate(targetDate);
       
       document.getElementById('p1WeekText').innerText = weekText;
       document.getElementById('p2WeekText').innerText = weekText;
@@ -523,7 +351,12 @@
       document.getElementById('p1TopicText').innerText = p1.subTopic || data.topic || '';
       document.getElementById('p2TopicText').innerText = p2.topic || data.topic || '';
 
-      // Page 1: 10 Questions rendering
+      // 파일명 미리보기 표시 (날짜 + 순번 체계)
+      const dateSeq = getYYYYMMDD(targetDate);
+      const seq = data.sequence || calculateSequenceNumber(targetDate);
+      const computedFileName = `English Community - ${dateSeq} - ${seq}.pdf`;
+      document.getElementById('generatedFileNameDisplay').innerText = `파일명: ${computedFileName}`;
+
       const dqContainer = document.getElementById('dqQuestionsContainer');
       dqContainer.innerHTML = '';
       (p1.questions || []).forEach((qObj) => {
@@ -545,7 +378,6 @@
         `;
       });
 
-      // Page 2: Expressions
       const todaysContainer = document.getElementById('todaysExprContainer');
       todaysContainer.innerHTML = '';
       (p2.todaysExpressions || []).forEach((item, idx) => {
@@ -553,7 +385,7 @@
           <div class="flex items-start justify-between">
             <div>
               <span class="font-bold text-navy-900">${idx+1}. #${item.en || ''}: ${item.kr || ''}#</span>
-              <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+              <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''}</div>
             </div>
             <span class="checkbox-square"></span>
           </div>
@@ -567,14 +399,13 @@
           <div class="flex items-start justify-between">
             <div>
               <span class="font-bold text-navy-900">${idx+1}. #${item.en || ''}: ${item.kr || ''}#</span>
-              <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
+              <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''}</div>
             </div>
             <span class="checkbox-square"></span>
           </div>
         `;
       });
 
-      // Story Text
       let rawStory = p2.storyText || '';
       let highlightedStory = rawStory.replace(/#([^#]+)#/g, '<span class="highlight-expr">$1</span>');
       document.getElementById('essayStoryContainer').innerHTML = `
@@ -584,7 +415,6 @@
         <p class="leading-relaxed font-serif text-slate-800">${highlightedStory}</p>
       `;
 
-      // Page 2: 10 Essay Discussion Questions
       const essayQContainer = document.getElementById('essayQuestionsContainer');
       essayQContainer.innerHTML = '';
       (p2.questions || []).forEach((qObj) => {
@@ -603,7 +433,6 @@
       });
     }
 
-    // Gemini API Direct Call with Strict 10-Question Prompt Enforcement
     async function generateWorksheetWithGemini() {
       const apiKey = localStorage.getItem('gemini_api_key') || '';
       if (!apiKey) {
@@ -613,61 +442,41 @@
       }
 
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Travel & Cultures';
-      const weekInfo = document.getElementById('weekInfoInput').value.trim() || getFormattedKoreanDate();
+      const targetDate = document.getElementById('targetDateInput').value || new Date().toISOString().split('T')[0];
+      const weekInfo = getFormattedKoreanDate(targetDate);
+      const sequence = calculateSequenceNumber(targetDate);
+      const dateSeq = getYYYYMMDD(targetDate);
+      const fileName = `English Community - ${dateSeq} - ${sequence}.pdf`;
       
       const btn = document.getElementById('btnGenerate');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>10문항 학습지 생성 중...</span>`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>생성 중 (${fileName})...</span>`;
 
       try {
-        const prompt = `You are an expert English conversation curriculum writer for "English Community". The slogan is "Speak Freely, Connect Deeply.".
-Create a professional 2-page learning worksheet strictly and exclusively based on the topic: "${customTopic}".
-
-CRITICAL REQUIREMENTS:
-1. Page 1 (Daily Talk & Share): Must contain EXACTLY 10 open-ended discussion questions about "${customTopic}". Each question must have EXACTLY 2 sample response choices with English sentences and accurate Korean translations.
-2. Page 2 (Essay Topic):
-   - 3 Today's Key Expressions related to "${customTopic}" with Korean meaning, English example sentence, and Korean example translation.
-   - 3 Review Expressions with Korean meaning, English example sentence, and Korean example translation.
-   - A narrative story (150-200 words) about "${customTopic}" incorporating all 6 expressions wrapped in hashtags like #expression#.
-   - EXACTLY 10 Essay Discussion Questions, each linked to an expression (with the expression tag and Korean question translation).
-
-Output ONLY raw JSON matching this exact structure without any markdown fencing or extra text:
+        const prompt = `You are an expert English curriculum writer for "English Community". 
+Create a professional 2-page learning worksheet strictly based on: "${customTopic}".
+Output ONLY raw JSON matching this structure:
 {
+  "target_date": "${targetDate}",
   "weekInfo": "${weekInfo}",
+  "sequence": "${sequence}",
+  "file_name": "${fileName}",
   "topic": "${customTopic}",
   "page1": {
     "title": "Daily Talk & Share",
     "subTopic": "${customTopic}",
-    "questions": [
-      {
-        "q": "1. Discussion question?",
-        "answers": [
-          {"en": "Answer 1 in English", "kr": "한글 번역 1"},
-          {"en": "Answer 2 in English", "kr": "한글 번역 2"}
-        ]
-      }
-    ]
+    "questions": [{"q": "1. Question?", "answers": [{"en": "Answer", "kr": "번역"}]}]
   },
   "page2": {
     "topic": "${customTopic}",
-    "todaysExpressions": [
-      {"en": "expr 1", "kr": "의미 1", "exampleEn": "Ex 1", "exampleKr": "예문 번역 1"},
-      {"en": "expr 2", "kr": "의미 2", "exampleEn": "Ex 2", "exampleKr": "예문 번역 2"},
-      {"en": "expr 3", "kr": "의미 3", "exampleEn": "Ex 3", "exampleKr": "예문 번역 3"}
-    ],
-    "reviewExpressions": [
-      {"en": "rev 1", "kr": "복습 1", "exampleEn": "Ex 1", "exampleKr": "예문 번역 1"},
-      {"en": "rev 2", "kr": "복습 2", "exampleEn": "Ex 2", "exampleKr": "예문 번역 2"},
-      {"en": "rev 3", "kr": "복습 3", "exampleEn": "Ex 3", "exampleKr": "예문 번역 3"}
-    ],
-    "storyText": "Narrative story using all expressions wrapped in #hashtags#...",
-    "questions": [
-      {"q": "1. Discussion question?", "expr": "expr 1", "qKr": "한글질문 번역"}
-    ]
+    "todaysExpressions": [{"en": "expr", "kr": "의미", "exampleEn": "Ex", "exampleKr": "예문"}],
+    "reviewExpressions": [{"en": "rev", "kr": "복습", "exampleEn": "Ex", "exampleKr": "예문"}],
+    "storyText": "Story with #expr#...",
+    "questions": [{"q": "1. Q?", "expr": "expr", "qKr": "번역"}]
   }
 }`;
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -683,16 +492,102 @@ Output ONLY raw JSON matching this exact structure without any markdown fencing 
         const parsedJSON = JSON.parse(rawText);
         parsedJSON.id = 'ws-' + Date.now();
         parsedJSON.date = new Date().toISOString();
+        parsedJSON.target_date = targetDate;
+        parsedJSON.sequence = sequence;
+        parsedJSON.file_name = fileName;
 
         renderWorksheet(parsedJSON);
         saveToHistory(parsedJSON);
-        showToast(`'${customTopic}' 10문항 학습지가 성공적으로 생성되었습니다!`, 'success');
+        showToast(`'${fileName}' 생성 완료!`, 'success');
       } catch (error) {
         console.error(error);
-        showToast(error.message || '학습지 생성에 실패했습니다.', 'error');
+        showToast(error.message || '생성 실패', 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i> <span>Gemini AI 10문항 2페이지 생성</span>`;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i> <span>Gemini AI 학습지 생성</span>`;
+      }
+    }
+
+    // 원클릭 폴더 저장 및 IndexDB 권한 연동
+    async function saveToLocalFolderOneClick() {
+      if (!currentData) {
+        alert('저장할 학습지 데이터가 없습니다.');
+        return;
+      }
+
+      try {
+        if (!window.showDirectoryPicker) {
+          alert('이 브라우저는 폴더 접근 API를 지원하지 않습니다.');
+          return;
+        }
+
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(STORE_NAME);
+        
+        let dirHandle = await new Promise((resolve, reject) => {
+          req.onsuccess = e => {
+            const db = e.target.result;
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const getReq = tx.objectStore(STORE_NAME).get(HANDLE_KEY);
+            getReq.onsuccess = () => resolve(getReq.result);
+            getReq.onerror = err => reject(err);
+          };
+        });
+
+        if (dirHandle) {
+          const perm = await dirHandle.queryPermission({ mode: 'readwrite' });
+          if (perm !== 'granted') {
+            const reqPerm = await dirHandle.requestPermission({ mode: 'readwrite' });
+            if (reqPerm !== 'granted') dirHandle = null;
+          }
+        }
+
+        if (!dirHandle) {
+          alert('저장할 폴더(private_pdfs)를 선택해 주세요.');
+          dirHandle = await window.showDirectoryPicker();
+          await new Promise((resolve, reject) => {
+            const dbReq = indexedDB.open(DB_NAME, 1);
+            dbReq.onsuccess = e => {
+              const db = e.target.result;
+              const tx = db.transaction(STORE_NAME, 'readwrite');
+              tx.objectStore(STORE_NAME).put(dirHandle, HANDLE_KEY);
+              tx.oncomplete = () => resolve();
+            };
+          });
+        }
+
+        const fileName = currentData.file_name || `English Community - ${getYYYYMMDD(currentData.target_date)} - ${currentData.sequence || '01'}.pdf`;
+        
+        // manifest.json 업데이트
+        let manifestData = { version: 1, pdfs: [] };
+        try {
+          const mHandle = await dirHandle.getFileHandle('manifest.json', { create: true });
+          const mFile = await mHandle.getFile();
+          const mText = await mFile.text();
+          if (mText) manifestData = JSON.parse(mText);
+        } catch (e) {}
+
+        const newEntry = {
+          id: currentData.id,
+          title: "English Community",
+          session: `${getYYYYMMDD(currentData.target_date)}-${currentData.sequence || '01'}`,
+          fileName: fileName,
+          createdAt: currentData.target_date
+        };
+
+        if (!manifestData.pdfs) manifestData.pdfs = [];
+        manifestData.pdfs = manifestData.pdfs.filter(p => p.fileName !== fileName);
+        manifestData.pdfs.unshift(newEntry);
+
+        const mHandleOut = await dirHandle.getFileHandle('manifest.json', { create: true });
+        const writableM = await mHandleOut.createWritable();
+        await writableM.write(JSON.stringify(manifestData, null, 2));
+        await writableM.close();
+
+        showToast(`'${fileName}' 메타데이터가 manifest.json에 성공적으로 반영되었습니다!`, 'success');
+      } catch (err) {
+        console.warn(err);
+        showToast('폴더 저장 중 오류가 발생했습니다.', 'error');
       }
     }
 
@@ -711,37 +606,26 @@ Output ONLY raw JSON matching this exact structure without any markdown fencing 
       renderHistoryList();
     }
 
-    function renderHistoryList(filterText = '') {
+    function renderHistoryList() {
       const listEl = document.getElementById('historyList');
       const countEl = document.getElementById('historyCount');
       if (!listEl) return;
       listEl.innerHTML = '';
+      if (countEl) countEl.innerText = `${historyStore.length}개`;
 
-      const filtered = historyStore.filter(item => 
-        (item.topic && item.topic.toLowerCase().includes(filterText.toLowerCase())) ||
-        (item.weekInfo && item.weekInfo.toLowerCase().includes(filterText.toLowerCase()))
-      );
-
-      if (countEl) countEl.innerText = `${filtered.length}개`;
-
-      if (filtered.length === 0) {
-        listEl.innerHTML = `<div class="text-xs text-slate-400 text-center py-6">보관된 학습지가 없습니다.</div>`;
+      if (historyStore.length === 0) {
+        listEl.innerHTML = `<div class="text-xs text-slate-400 text-center py-6">보관된 내역이 없습니다.</div>`;
         return;
       }
 
-      filtered.forEach((item) => {
-        const dateStr = new Date(item.date || Date.now()).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+      historyStore.forEach((item) => {
         const isCurrent = currentData && currentData.id === item.id;
-
         listEl.innerHTML += `
           <div onclick="selectHistoryItem('${item.id}')" class="p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-center justify-between ${isCurrent ? 'bg-skybrand-50 border-skybrand-300 text-skybrand-900 font-medium' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'}">
             <div class="truncate pr-2">
               <div class="font-bold truncate">${item.topic}</div>
-              <div class="text-[10px] text-slate-400 mt-0.5">${item.weekInfo} · ${dateStr}</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">${item.file_name || item.target_date}</div>
             </div>
-            <button onclick="event.stopPropagation(); deleteHistoryItem('${item.id}')" class="text-slate-400 hover:text-rose-600 p-1">
-              <i class="fa-solid fa-trash-can text-xs"></i>
-            </button>
           </div>
         `;
       });
@@ -752,33 +636,7 @@ Output ONLY raw JSON matching this exact structure without any markdown fencing 
       if (found) {
         renderWorksheet(found);
         renderHistoryList();
-        showToast(`'${found.topic}' 학습지를 불러왔습니다.`, 'info');
       }
-    }
-
-    function deleteHistoryItem(id) {
-      historyStore = historyStore.filter(i => i.id !== id);
-      localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
-      renderHistoryList();
-      showToast('삭제되었습니다.', 'info');
-    }
-
-    function filterHistory() {
-      const input = document.getElementById('historySearch');
-      renderHistoryList(input ? input.value : '');
-    }
-
-    function toggleAutoScheduler() {
-      const card = document.getElementById('schedulerCard');
-      const btn = document.getElementById('schedulerToggleBtn');
-      showToast('자동 생성 기능이 준비되었습니다.', 'info');
-    }
-
-    function copyContentAsMarkdown() {
-      if (!currentData) return;
-      let text = `# English Community Worksheets: ${currentData.weekInfo} - ${currentData.topic}\n\n`;
-      navigator.clipboard.writeText(text);
-      showToast('마크다운 텍스트가 복사되었습니다!', 'success');
     }
 
     function exportJSON() {
@@ -786,11 +644,11 @@ Output ONLY raw JSON matching this exact structure without any markdown fencing 
       const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentData, null, 2));
       const dlAnchor = document.createElement('a');
       dlAnchor.setAttribute("href", jsonStr);
-      dlAnchor.setAttribute("download", `EnglishCommunity_${currentData.topic}_${Date.now()}.json`);
+      dlAnchor.setAttribute("download", `${currentData.file_name || 'worksheet'}.json`);
       document.body.appendChild(dlAnchor);
       dlAnchor.click();
       dlAnchor.remove();
-      showToast('JSON 파일 다운로드 완료', 'success');
+      showToast('JSON 내보내기 완료', 'success');
     }
 
     function showToast(msg, type = 'info') {
