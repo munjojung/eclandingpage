@@ -2,9 +2,9 @@
 import fs from 'fs';
 import path from 'path';
 
-// 📌 .env 파일에 정의된 환경 변수들을 가져옵니다.
+// 📌 환경 변수 설정 (ADMIN_PASSWORD 사용)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash"; 
 
 const VERCEL_SAVE_API_URL = "https://eclandingpage-kappa.vercel.app/api/save-worksheet";
@@ -24,7 +24,7 @@ async function runLocalGeneration() {
 
   const outputDir = path.resolve('local_outputs');
   let geminiData = null;
-  let targetFilePath = null; // 📌 관리 중인 백업 파일 경로 추적용 변수
+  let targetFilePath = null;
 
   // 📌 1단계: local_outputs 폴더에 전송 실패로 남아있는 기존 백업 파일 검사
   if (fs.existsSync(outputDir)) {
@@ -48,7 +48,7 @@ async function runLocalGeneration() {
     }
   }
 
-  // 📌 로컬 백업이 없는 경우에만 Gemini API 호출 및 새 백업 저장 수행
+  // 📌 로컬 백업이 없는 경우에만 Gemini AI 호출 및 새 백업 저장 수행
   if (!geminiData) {
     if (!GEMINI_API_KEY) {
       console.error("❌ 오류: GEMINI_API_KEY가 .env 파일에 설정되어 있지 않습니다.");
@@ -78,7 +78,7 @@ async function runLocalGeneration() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-admin-secret': ADMIN_SECRET_KEY
+        'x-admin-secret': ADMIN_PASSWORD // 👈 ADMIN_PASSWORD 반영
       },
       body: JSON.stringify({
         topic,
