@@ -48,7 +48,7 @@ async function runLocalGeneration() {
     }
   }
 
-  // 📌 로컬 백업이 없는 경우에만 Gemini AI 호출 및 새 백업 저장 수행
+  // 📌 로컬 백업이 없는 경우에만 Gemini API 호출 및 새 백업 저장 수행
   if (!geminiData) {
     if (!GEMINI_API_KEY) {
       console.error("❌ 오류: GEMINI_API_KEY가 .env 파일에 설정되어 있지 않습니다.");
@@ -88,12 +88,22 @@ async function runLocalGeneration() {
       })
     });
 
-    const result = await response.json();
+    // 💡 응답이 JSON인지 검사하여 404 HTML 에러 시 안전하게 예외 처리
+    const contentType = response.headers.get("content-type");
+    let result;
+    
+    if (contentType && contentType.includes("application/json")) {
+      result = await response.json();
+    } else {
+      const textHtml = await response.text();
+      throw new Error(`Vercel API 경로를 찾지 못했거나 서버 에러가 발생했습니다 (HTTP 상태 코드: ${response.status}). 라우트 주소나 Vercel 배포 상태를 확인해주세요.`);
+    }
+
     if (response.ok) {
       console.log("==================================================");
       console.log("🎉 성공적으로 Vercel/Neon DB에 저장되었습니다!", result);
 
-      // 💡 [핵심] 전송 성공 시, 더 이상 필요 없는 로컬 백업 파일을 자동 삭제하여 중복 방지
+      // 💡 전송 성공 시 로컬 백업 파일 자동 삭제
       if (targetFilePath && fs.existsSync(targetFilePath)) {
         fs.unlinkSync(targetFilePath);
         console.log(`🗑️ 전송 완료로 인해 로컬 백업 파일이 안전하게 정리되었습니다: ${targetFilePath}`);
@@ -106,7 +116,7 @@ async function runLocalGeneration() {
     }
 
   } catch (error) {
-    console.error("❌ Vercel 전송 중 네트워크 에러 발생 (로컬 백업은 유지됨):", error);
+    console.error("❌ Vercel 전송 중 에러 발생 (로컬 백업은 안전하게 유지됨):", error.message);
   }
 }
 
