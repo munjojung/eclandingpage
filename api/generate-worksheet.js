@@ -7,12 +7,9 @@ export default async function handler(req, res) {
 
   try {
     const { topic, weekInfo, target_date, sequence, file_name } = req.body;
-    
-    // 환경 변수 키 가져오기 (공백 제거)
     const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '';
 
     if (!apiKey) {
-      console.error('API Key Error: GEMINI_API_KEY is missing in Vercel environment variables.');
       return res.status(500).json({ success: false, error: 'Vercel에 GEMINI_API_KEY 환경 변수가 설정되어 있지 않습니다.' });
     }
 
@@ -39,25 +36,40 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
   }
 }`;
 
-    // 사용자가 요청하신 gemini-3.8-flash 모델 유지
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
-    const geminiRes = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }]
-          }
-        ]
-      })
-    });
+    let geminiRes;
+    let resultData;
+    let maxRetries = 3;
+    let attempt = 0;
 
-    const resultData = await geminiRes.json();
+    // 일시적인 트래픽 폭증(High Demand) 대응 자동 재시도 로직
+    while (attempt < maxRetries) {
+      attempt++;
+      geminiRes = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+
+      resultData = await geminiRes.json();
+
+      if (geminiRes.ok) {
+        break; // 성공 시 탈출
+      }
+
+      // 트래픽 폭증 에러(503 또는 고부하 메시지)인 경우 2초 대기 후 재시도
+      const errorMessage = resultData.error?.message || '';
+      if (attempt < maxRetries && (geminiRes.status === 503 || errorMessage.includes('high demand'))) {
+        console.warn(`Attempt ${attempt} failed due to high demand. Retrying in 2 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+
+      break;
+    }
 
     if (!geminiRes.ok) {
-      console.error('Google Gemini API Response Error:', JSON.stringify(resultData));
       throw new Error(resultData.error?.message || `Gemini API 오류 발생 (상태 코드: ${geminiRes.status})`);
     }
 
