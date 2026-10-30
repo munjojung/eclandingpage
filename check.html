@@ -3,110 +3,497 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>DIC 밋업 팀 확인하기</title>
+
     <style>
-        * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, sans-serif; }
-        body { background: #f8fafc; margin: 0; padding: 40px 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #1e293b; }
-        .card { background: white; width: 100%; max-width: 480px; padding: 35px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; }
-        h2 { color: #ff5e62; margin-bottom: 8px; font-size: 24px; }
-        p { color: #64748b; font-size: 14px; margin-bottom: 25px; }
-        .input-group { display: flex; gap: 8px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; outline: none; }
-        input:focus { border-color: #ff5e62; }
-        button { padding: 12px 20px; background: #ff5e62; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
-        button:hover { background: #e0484c; }
-        
-        #resultArea { margin-top: 25px; text-align: left; display: none; background: #f1f5f9; padding: 20px; border-radius: 10px; border-left: 5px solid #ff5e62; }
-        .result-title { font-size: 16px; font-weight: bold; color: #0f172a; margin-bottom: 10px; }
-        .result-item { font-size: 14px; margin-bottom: 6px; color: #334155; }
-        .error-msg { color: #ef4444; font-size: 14px; margin-top: 15px; font-weight: 500; display: none; background: #fee2e2; padding: 10px; border-radius: 6px; }
+        * {
+            box-sizing: border-box;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont,
+                'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #f8fafc;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        .card {
+            background: white;
+            width: 100%;
+            max-width: 480px;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        h2 {
+            color: #ff5e62;
+            margin: 0 0 8px;
+            font-size: 24px;
+        }
+
+        p {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #ff5e62;
+            box-shadow: 0 0 0 3px rgba(255, 94, 98, 0.12);
+        }
+
+        button {
+            padding: 12px 20px;
+            background: #ff5e62;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+
+        button:hover:not(:disabled) {
+            background: #e0484c;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #resultArea {
+            margin-top: 25px;
+            text-align: left;
+            display: none;
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #ff5e62;
+        }
+
+        .result-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+
+        .result-item {
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #334155;
+            overflow-wrap: anywhere;
+        }
+
+        #resMembers {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-top: 5px;
+            white-space: pre-line;
+            overflow-wrap: anywhere;
+        }
+
+        .error-msg {
+            color: #b42318;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-top: 15px;
+            font-weight: 500;
+            display: none;
+            background: #fee2e2;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: left;
+        }
+
+        .success-msg {
+            color: #067647;
+            background: #dcfae6;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #64748b;
+            margin: 18px 0 0;
+        }
+
+        @media (max-width: 420px) {
+            .card {
+                padding: 24px 18px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-<div class="card">
+<main class="card">
     <h2>🎯 밋업 팀 확인하기</h2>
-    <p>신청하실 때 등록하셨던 휴대폰 번호를 입력해 주세요.</p>
-    
-    <div class="input-group">
-        <input type="text" id="phoneInput" placeholder="예: 010-1234-5678" onkeydown="if(event.key==='Enter') checkGroup()">
-        <button onclick="checkGroup()">조회하기</button>
-    </div>
 
-    <div id="errorMsg" class="error-msg"></div>
+    <p>
+        밋업 신청 시 등록한 휴대폰 번호를 입력해 주세요.
+        서버에서 등록 정보를 확인한 후 팀 배정 결과를 표시합니다.
+    </p>
 
-    <div id="resultArea">
-        <div class="result-title" id="resGroupName">Group #0</div>
-        <div class="result-item">📅 <b>날짜:</b> <span id="resDate"></span></div>
-        <div class="result-item">⭐ <b>퍼실리테이터:</b> <span id="resFacilitator"></span></div>
-        <div class="result-item" style="margin-top: 12px;">👥 <b>팀원 명단:</b></div>
-        <div id="resMembers" style="background: white; padding: 10px; border-radius: 6px; font-size: 13px; margin-top: 5px; white-space: pre-line;"></div>
+    <form id="checkForm" novalidate>
+        <div class="input-group">
+            <input
+                type="tel"
+                id="phoneInput"
+                name="phone"
+                placeholder="예: 010-1234-5678"
+                inputmode="tel"
+                autocomplete="tel"
+                maxlength="20"
+                aria-label="등록한 휴대폰 번호"
+                aria-describedby="phoneHint"
+                required
+            >
+
+            <button type="submit" id="checkButton">
+                조회하기
+            </button>
+        </div>
+    </form>
+
+    <p class="hint" id="phoneHint">
+        전화번호 입력만으로 회원 인증이 완료되지는 않습니다.
+    </p>
+
+    <div
+        id="errorMsg"
+        class="error-msg"
+        role="alert"
+        aria-live="polite"
+    ></div>
+
+    <div
+        id="resultArea"
+        aria-live="polite"
+        aria-atomic="true"
+    >
+        <div class="result-title" id="resGroupName"></div>
+
+        <div class="result-item">
+            📅 <b>날짜:</b>
+            <span id="resDate"></span>
+        </div>
+
+        <div class="result-item">
+            ⭐ <b>퍼실리테이터:</b>
+            <span id="resFacilitator"></span>
+        </div>
+
+        <div class="result-item" style="margin-top: 12px;">
+            👥 <b>팀원 명단:</b>
+        </div>
+
+        <div id="resMembers"></div>
     </div>
-</div>
+</main>
 
 <script>
-    async function checkGroup() {
-        const phone = document.getElementById('phoneInput').value.trim();
-        const errorDiv = document.getElementById('errorMsg');
-        const resultArea = document.getElementById('resultArea');
+    'use strict';
 
+    const form = document.getElementById('checkForm');
+    const phoneInput = document.getElementById('phoneInput');
+    const checkButton = document.getElementById('checkButton');
+
+    const errorDiv = document.getElementById('errorMsg');
+    const resultArea = document.getElementById('resultArea');
+
+    const resGroupName = document.getElementById('resGroupName');
+    const resDate = document.getElementById('resDate');
+    const resFacilitator = document.getElementById('resFacilitator');
+    const resMembers = document.getElementById('resMembers');
+
+    let isChecking = false;
+
+    /**
+     * 화면 메시지를 표시합니다.
+     * 사용자 입력이나 API 응답은 HTML로 해석하지 않습니다.
+     */
+    function showMessage(message, type = 'error') {
+        errorDiv.textContent = message;
+        errorDiv.className =
+            type === 'success'
+                ? 'error-msg success-msg'
+                : 'error-msg';
+
+        errorDiv.style.display = 'block';
+    }
+
+    /**
+     * 이전 결과와 메시지를 초기화합니다.
+     */
+    function clearDisplay() {
+        errorDiv.textContent = '';
         errorDiv.style.display = 'none';
+
         resultArea.style.display = 'none';
 
-        if (!phone) {
-            errorDiv.innerText = '전화번호를 입력해 주세요.';
-            errorDiv.style.display = 'block';
+        resGroupName.textContent = '';
+        resDate.textContent = '';
+        resFacilitator.textContent = '';
+        resMembers.textContent = '';
+    }
+
+    /**
+     * 화면의 조회 상태를 변경합니다.
+     */
+    function setLoading(loading) {
+        isChecking = loading;
+        checkButton.disabled = loading;
+        phoneInput.disabled = loading;
+
+        checkButton.textContent = loading
+            ? '조회 중...'
+            : '조회하기';
+
+        form.setAttribute(
+            'aria-busy',
+            loading ? 'true' : 'false'
+        );
+    }
+
+    /**
+     * 전화번호의 입력 형식만 검사합니다.
+     *
+     * 주의:
+     * 이 검사는 입력값의 형식만 확인합니다.
+     * 회원 여부나 본인 여부를 인증하지 않습니다.
+     */
+    function normalizePhone(phone) {
+        return phone.replace(/[^0-9]/g, '');
+    }
+
+    function isValidPhoneFormat(phone) {
+        return /^01[016789]\d{7,8}$/.test(phone);
+    }
+
+    /**
+     * 서버에서 확인된 팀 배정 정보를 표시합니다.
+     *
+     * 서버 응답에 없는 정보를 임의로 만들어 표시하지 않습니다.
+     */
+    function displayGroup(data) {
+        const groupNo = data.group_no;
+
+        resGroupName.textContent =
+            groupNo !== undefined && groupNo !== null
+                ? `🎉 Group #${groupNo} 배정 완료!`
+                : '🎉 팀 배정 정보 확인 완료';
+
+        resDate.textContent =
+            typeof data.date === 'string' && data.date.trim()
+                ? data.date
+                : '일정 정보 없음';
+
+        resFacilitator.textContent =
+            typeof data.facilitator === 'string' &&
+            data.facilitator.trim()
+                ? data.facilitator
+                : '정보 없음';
+
+        resMembers.textContent =
+            typeof data.members === 'string' && data.members.trim()
+                ? data.members
+                : '팀원 정보가 등록되어 있지 않습니다.';
+
+        resultArea.style.display = 'block';
+    }
+
+    /**
+     * 밋업 팀 조회
+     *
+     * 회원 또는 팀 배정 여부는 서버 응답을 기준으로 판단합니다.
+     * API 실패 시 임시 회원이나 오프라인 회원으로 처리하지 않습니다.
+     */
+    async function checkGroup() {
+        if (isChecking) {
             return;
         }
 
-        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        clearDisplay();
+
+        const inputPhone = phoneInput.value.trim();
+
+        if (!inputPhone) {
+            showMessage('휴대폰 번호를 입력해 주세요.');
+            phoneInput.focus();
+            return;
+        }
+
+        const phone = normalizePhone(inputPhone);
+
+        if (!isValidPhoneFormat(phone)) {
+            showMessage(
+                '휴대폰 번호 형식을 확인해 주세요. 예: 010-1234-5678'
+            );
+            phoneInput.focus();
+            return;
+        }
+
+        setLoading(true);
 
         try {
-            // 📌 통합 API 경로(/api/worksheet)로 요청하도록 수정 및 action: 'check' 전달
-            const res = await fetch('/api/worksheet', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'check', phone })
-            });
+            const controller = new AbortController();
 
-            const result = await res.json();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, 15000);
 
-            if (res.ok && result.success && result.data) {
-                document.getElementById('resGroupName').innerText = `🎉 Group #${result.data.group_no || '1'} 배정 완료!`;
-                document.getElementById('resDate').innerText = result.data.date || '오늘';
-                document.getElementById('resFacilitator').innerText = result.data.facilitator || '미정';
-                document.getElementById('resMembers').innerText = result.data.members || phone;
-                resultArea.style.display = 'block';
-            } else {
-                // DB에 없을 때 또는 테스트용 010 번호 Fallback[cite: 12]
-                if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
-                    document.getElementById('resGroupName').innerText = `🎉 Group #1 배정 완료 (임시 인증)`;
-                    document.getElementById('resDate').innerText = '2026년 최신 세션';
-                    document.getElementById('resFacilitator').innerText = '관리자';
-                    document.getElementById('resMembers').innerText = `${phone} (인증된 회원)`;
-                    resultArea.style.display = 'block';
+            let response;
+
+            try {
+                response = await fetch('/api/worksheet', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'check',
+                        phone: phone
+                    }),
+                    signal: controller.signal
+                });
+            } finally {
+                clearTimeout(timeoutId);
+            }
+
+            let result;
+
+            try {
+                result = await response.json();
+            } catch {
+                throw new Error('INVALID_RESPONSE');
+            }
+
+            if (!response.ok) {
+                if (response.status === 401 ||
+                    response.status === 403) {
+                    showMessage(
+                        '조회 권한을 확인할 수 없습니다. 관리자에게 문의해 주세요.'
+                    );
                     return;
                 }
 
-                errorDiv.innerText = result.error || '등록되지 않은 휴대폰 번호입니다.';
-                errorDiv.style.display = 'block';
-            }
-        } catch (err) {
-            console.error('Check Group Error:', err);
-            // 네트워크 오류 시에도 010 번호면 임시 허용[cite: 12]
-            if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
-                document.getElementById('resGroupName').innerText = `🎉 Group #1 배정 완료 (오프라인 모드)`;
-                document.getElementById('resDate').innerText = '2026년 최신 세션';
-                document.getElementById('resFacilitator').innerText = '관리자';
-                document.getElementById('resMembers').innerText = `${phone} (임시 확인)`;
-                resultArea.style.display = 'block';
+                if (response.status === 404) {
+                    showMessage(
+                        '조회 API를 찾을 수 없습니다. 관리자에게 문의해 주세요.'
+                    );
+                    return;
+                }
+
+                if (response.status >= 500) {
+                    showMessage(
+                        '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+                    );
+                    return;
+                }
+
+                showMessage(
+                    '조회 요청을 처리하지 못했습니다. 입력 정보를 확인해 주세요.'
+                );
                 return;
             }
 
-            errorDiv.innerText = '서버 통신 중 오류가 발생했습니다.';
-            errorDiv.style.display = 'block';
+            /*
+             * API가 명시적으로 성공을 반환하고,
+             * 조회 데이터가 존재할 때만 결과를 표시합니다.
+             *
+             * 이 조건은 서버의 실제 회원 인증을 대체하지 않습니다.
+             * 서버가 action=check에서 회원 및 팀 배정 여부를
+             * 올바르게 검증해야 합니다.
+             */
+            if (
+                !result ||
+                result.success !== true ||
+                !result.data ||
+                typeof result.data !== 'object' ||
+                Array.isArray(result.data)
+            ) {
+                showMessage(
+                    typeof result?.error === 'string' && result.error.trim()
+                        ? result.error
+                        : '등록된 팀 배정 정보를 찾을 수 없습니다.'
+                );
+                return;
+            }
+
+            displayGroup(result.data);
+
+        } catch (error) {
+            console.error('Check Group Error:', error);
+
+            if (error.name === 'AbortError') {
+                showMessage(
+                    '서버 응답 시간이 초과되었습니다. 네트워크를 확인한 후 다시 시도해 주세요.'
+                );
+            } else if (error.message === 'INVALID_RESPONSE') {
+                showMessage(
+                    '서버 응답을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+                );
+            } else {
+                showMessage(
+                    '서버에 연결할 수 없습니다. 인터넷 연결을 확인한 후 다시 시도해 주세요.'
+                );
+            }
+
+            /*
+             * 중요:
+             * 네트워크 오류가 발생해도 회원으로 인정하지 않습니다.
+             * 임시 인증이나 오프라인 인증을 제공하지 않습니다.
+             */
+        } finally {
+            setLoading(false);
         }
     }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        checkGroup();
+    });
 </script>
 
 </body>
