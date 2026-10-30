@@ -459,10 +459,11 @@
       if (!data) return;
       currentData = data;
 
-      const p1 = safeJsonParse(data.page1) || data.page1 || {};
-      const p2 = safeJsonParse(data.page2) || data.page2 || {};
+      const p1 = safeJsonParse(data.page1) || safeJsonParse(data.page1_data) || data.page1 || {};
+      const p2 = safeJsonParse(data.page2) || safeJsonParse(data.page2_data) || data.page2 || {};
 
       const weekText = data.weekInfo || data.target_date || getFormattedKoreanDate();
+      
       const elP1Week = document.getElementById('p1WeekText');
       if (elP1Week) elP1Week.innerText = weekText;
 
@@ -470,7 +471,7 @@
       if (elP1Title) elP1Title.innerText = p1.title || "Daily Talk & Share";
 
       const elP1Topic = document.getElementById('p1TopicText');
-      if (elP1Topic) elP1Topic.innerText = p1.subTopic || data.topic || '';
+      if (elP1Topic) elP1Topic.innerText = p1.subTopic || p1.topic || data.topic || '';
 
       const elP2Week = document.getElementById('p2WeekText');
       if (elP2Week) elP2Week.innerText = weekText;
@@ -478,19 +479,20 @@
       const dqContainer = document.getElementById('dqQuestionsContainer');
       if (dqContainer) {
         dqContainer.innerHTML = '';
-        const qList = p1.questions || p1.data?.questions || (Array.isArray(p1) ? p1 : []);
+        
+        const qList = p1.questions || p1.data?.questions || p1.list || (Array.isArray(p1) ? p1 : []);
         
         if (qList.length > 0) {
           qList.forEach((qObj, index) => {
-            const qText = qObj.q || qObj.question || `Question ${index + 1}`;
-            const answersArr = qObj.answers || qObj.answer || [];
+            const qText = qObj.q || qObj.question || qObj.text || `Question ${index + 1}`;
+            const answersArr = qObj.answers || qObj.answer || qObj.options || [];
             
             const answersHtml = answersArr.map(ans => `
               <div class="flex items-start">
                 <span class="checkbox-square mt-1"></span>
                 <div>
-                  <div>${ans.en || ans.english || ''}</div>
-                  <div class="text-[11px] text-slate-500">${ans.kr || ans.korean || ''}</div>
+                  <div>${ans.en || ans.english || ans.text || ans || ''}</div>
+                  <div class="text-[11px] text-slate-500">${ans.kr || ans.korean || ans.translation || ''}</div>
                 </div>
               </div>
             `).join('');
@@ -512,12 +514,12 @@
       }
 
       const elP2Topic = document.getElementById('p2TopicText');
-      if (elP2Topic) elP2Topic.innerText = p2.topic || data.topic || '';
+      if (elP2Topic) elP2Topic.innerText = p2.topic || p2.subTopic || data.topic || '';
 
       const todaysContainer = document.getElementById('todaysExprContainer');
       if (todaysContainer) {
         todaysContainer.innerHTML = '';
-        const todaysExprs = p2.todaysExpressions || p2.expressions || [];
+        const todaysExprs = p2.todaysExpressions || p2.expressions || p2.today || [];
         todaysExprs.forEach((item, idx) => {
           todaysContainer.innerHTML += `
             <div class="flex items-start justify-between text-[11px]">
@@ -534,12 +536,12 @@
       const reviewContainer = document.getElementById('reviewExprContainer');
       if (reviewContainer) {
         reviewContainer.innerHTML = '';
-        const reviewExprs = p2.reviewExpressions || [];
+        const reviewExprs = p2.reviewExpressions || p2.review || [];
         reviewExprs.forEach((item, idx) => {
           reviewContainer.innerHTML += `
             <div class="flex items-start justify-between text-[11px]">
               <div>
-                <span class="font-bold text-navy-900">${idx+1}. #${item.en || ''}: ${item.kr || ''}#</span>
+                <span class="font-bold text-navy-900">${idx+1}. #${item.en || item.expression || ''}: ${item.kr || item.meaning || ''}#</span>
                 <div class="text-slate-600 italic mt-0.5">${item.exampleEn || ''} <span class="text-slate-400">(${item.exampleKr || ''})</span></div>
               </div>
               <span class="checkbox-square"></span>
@@ -548,7 +550,7 @@
         });
       }
 
-      const rawStory = p2.storyText || p2.story || '';
+      const rawStory = p2.storyText || p2.story || p2.narrative || '';
       let highlightedStory = rawStory.replace(/#([^#]+)#/g, '<span class="highlight-expr">$1</span>');
       const elStory = document.getElementById('essayStoryContainer');
       if (elStory) {
@@ -563,7 +565,7 @@
       const essayQContainer = document.getElementById('essayQuestionsContainer');
       if (essayQContainer) {
         essayQContainer.innerHTML = '';
-        const essayQuestions = p2.questions || [];
+        const essayQuestions = p2.questions || p2.essayQuestions || [];
         essayQuestions.forEach((qObj) => {
           essayQContainer.innerHTML += `
             <div class="flex items-start justify-between text-[11px] py-1 border-b border-slate-100">
@@ -753,4 +755,3 @@
   </script>
 </body>
 </html>
-  </script>
