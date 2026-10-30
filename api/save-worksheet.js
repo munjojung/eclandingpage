@@ -2,15 +2,15 @@
 import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req, res) {
-  // POST 요청만 허용
+  // 📌 POST 요청만 허용
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // 어드민 시크릿 키 검증
+  // 📌 어드민 비밀번호 검증 (ADMIN_PASSWORD 환경 변수 사용)
   const adminSecret = req.headers['x-admin-secret'];
-  if (adminSecret !== process.env.ADMIN_SECRET_KEY) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid Admin Secret' });
+  if (adminSecret !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid Admin Password' });
   }
 
   try {
@@ -20,11 +20,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields in request body' });
     }
 
-    // Neon DB 연결
+    // 📌 Neon DB 연결
     const sql = neon(process.env.DATABASE_URL);
 
-    // DB에 데이터 저장 (테이블 구조에 맞게 쿼리 작성)
-    // 예시: worksheets 테이블에 저장하는 경우
+    // 📌 DB에 데이터 저장
     await sql`
       INSERT INTO worksheets (topic, target_date, page1_data, page2_data, created_at)
       VALUES (${topic}, ${targetDate}, ${JSON.stringify(page1Data)}, ${JSON.stringify(page2Data)}, NOW())
