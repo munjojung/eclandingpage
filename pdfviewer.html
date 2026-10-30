@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF 뷰어 - Vercel DB 목록 선택 및 원클릭 연동</title>
+  <title>PDF 뷰어 - 날짜 및 순번 명명 규칙 연동</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -93,7 +93,6 @@
     const worksheetSelect = document.getElementById('worksheetSelect');
     const zoomToggleBtn = document.getElementById('zoomToggleBtn');
 
-    // IndexedDB를 활용한 디렉토리 핸들 영구 저장
     const DB_NAME = 'PdfViewerDB';
     const STORE_NAME = 'handles';
     const HANDLE_KEY = 'private_pdfs_dir';
@@ -140,7 +139,6 @@
         if (res.ok && result.success && Array.isArray(result.data) && result.data.length > 0) {
           dbWorksheets = result.data;
           
-          // 셀렉트박스 옵션 동적 생성 (주제와 날짜 표시)
           worksheetSelect.innerHTML = '';
           dbWorksheets.forEach((item, index) => {
             const opt = document.createElement('option');
@@ -214,69 +212,22 @@
           await saveDirHandle(dirHandle);
         }
 
-        loadingText.textContent = `"${selectedWorksheet.topic}" 관련 파일 매칭 중...`;
+        loadingText.textContent = `"${selectedWorksheet.topic}" 관련 파일 찾는 중...`;
         
-        let manifestData = null;
-        try {
-          const manifestHandle = await dirHandle.getFileHandle('manifest.json');
-          const manifestFile = await manifestHandle.getFile();
-          manifestData = JSON.parse(await manifestFile.text());
-        } catch (e) {
-          console.warn('manifest.json 로드 불가:', e);
-        }
-
-        let targetFileName = selectedWorksheet.file_name || '';
-        let timeStamp = '';
-        if (selectedWorksheet.created_at) {
-          const d = new Date(selectedWorksheet.created_at);
-          if (!isNaN(d.getTime())) {
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            const hh = String(d.getHours()).padStart(2, '0');
-            const min = String(d.getMinutes()).padStart(2, '0');
-            timeStamp = `${yyyy}${mm}${dd}_${hh}${min}`;
-          }
-        }
-
+        let targetFileName = selectedWorksheet.file_name ? selectedWorksheet.file_name.trim() : '';
         let targetFileHandle = null;
 
-        // 1. manifest에서 파일명 매칭
-        if (manifestData && Array.isArray(manifestData.pdfs)) {
-          const matchedPdf = manifestData.pdfs.find(p => 
-            p.fileName === targetFileName || (timeStamp && p.fileName.includes(timeStamp))
-          );
-          if (matchedPdf) {
-            try {
-              targetFileHandle = await dirHandle.getFileHandle(matchedPdf.fileName);
-            } catch (err) {}
-          }
-        }
-
-        // 2. 폴더 내 파일 직접 스캔 매칭
-        if (!targetFileHandle) {
-          for await (const entry of dirHandle.values()) {
-            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
-              if ((targetFileName && entry.name === targetFileName) || (timeStamp && entry.name.includes(timeStamp))) {
-                targetFileHandle = entry;
-                break;
-              }
-            }
-          }
-        }
-
-        // 3. Fallback: 첫 번째 PDF
-        if (!targetFileHandle) {
-          for await (const entry of dirHandle.values()) {
-            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
-              targetFileHandle = entry;
-              break;
-            }
+        // DB에 기록된 정확한 file_name으로 폴더 내 파일 직접 획득
+        if (targetFileName) {
+          try {
+            targetFileHandle = await dirHandle.getFileHandle(targetFileName);
+          } catch (e) {
+            console.warn('Exact file_name not found:', targetFileName);
           }
         }
 
         if (!targetFileHandle) {
-          alert('일치하는 PDF 파일을 찾을 수 없습니다.');
+          alert(`일치하는 PDF 파일(${targetFileName})을 폴더에서 찾을 수 없습니다.`);
           loadingOverlay.classList.add('hidden');
           return;
         }
