@@ -13,8 +13,18 @@ export default async function handler(req, res) {
       return res.status(500).json({ success: false, error: 'Vercel에 GEMINI_API_KEY 환경 변수가 설정되어 있지 않습니다.' });
     }
 
+    // 📌 정확히 10문항씩 생성하도록 요청하는 프롬프트
     const prompt = `You are an expert English curriculum writer for "English Community". 
 Create a professional 2-page learning worksheet strictly based on: "${topic}".
+
+CRITICAL REQUIREMENTS:
+1. Page 1 (Daily Talk & Share): Must contain EXACTLY 10 discussion questions about "${topic}". Each question must have EXACTLY 2 sample response choices with English sentences and Korean translations.
+2. Page 2 (Essay Topic):
+   - 3 Today's Key Expressions with Korean meaning and example sentences.
+   - 3 Review Expressions with Korean meaning and example sentences.
+   - A narrative story incorporating all 6 expressions wrapped in hashtags like #expression#.
+   - EXACTLY 10 Essay Discussion Questions, each linked to an expression.
+
 Output ONLY raw JSON matching this exact structure without markdown ticks:
 {
   "target_date": "${target_date}",
@@ -25,17 +35,36 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
   "page1": {
     "title": "Daily Talk & Share",
     "subTopic": "${topic}",
-    "questions": [{"q": "1. Question?", "answers": [{"en": "Answer", "kr": "번역"}]}]
+    "questions": [
+      {
+        "q": "1. Question?",
+        "answers": [
+          {"en": "Answer 1", "kr": "번역 1"},
+          {"en": "Answer 2", "kr": "번역 2"}
+        ]
+      }
+    ]
   },
   "page2": {
     "topic": "${topic}",
-    "todaysExpressions": [{"en": "expr", "kr": "의미", "exampleEn": "Ex", "exampleKr": "예문"}],
-    "reviewExpressions": [{"en": "rev", "kr": "복습", "exampleEn": "Ex", "exampleKr": "예문"}],
-    "storyText": "Story with #expr#...",
-    "questions": [{"q": "1. Q?", "expr": "expr", "qKr": "번역"}]
+    "todaysExpressions": [
+      {"en": "expr 1", "kr": "의미 1", "exampleEn": "Ex 1", "exampleKr": "예문 1"},
+      {"en": "expr 2", "kr": "의미 2", "exampleEn": "Ex 2", "exampleKr": "예문 2"},
+      {"en": "expr 3", "kr": "의미 3", "exampleEn": "Ex 3", "exampleKr": "예문 3"}
+    ],
+    "reviewExpressions": [
+      {"en": "rev 1", "kr": "복습 1", "exampleEn": "Ex 1", "exampleKr": "예문 1"},
+      {"en": "rev 2", "kr": "복습 2", "exampleEn": "Ex 2", "exampleKr": "예문 2"},
+      {"en": "rev 3", "kr": "복습 3", "exampleEn": "Ex 3", "exampleKr": "예문 3"}
+    ],
+    "storyText": "Story using all expressions wrapped in #hashtags#...",
+    "questions": [
+      {"q": "1. Question?", "expr": "expr 1", "qKr": "한글질문 번역"}
+    ]
   }
 }`;
 
+    // 요청하신 gemini-3.8-flash 모델 유지 및 트래픽 폭증 대응 자동 재시도 로직
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
     let geminiRes;
@@ -43,7 +72,6 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
     let maxRetries = 3;
     let attempt = 0;
 
-    // 일시적인 트래픽 폭증(High Demand) 대응 자동 재시도 로직
     while (attempt < maxRetries) {
       attempt++;
       geminiRes = await fetch(endpoint, {
@@ -53,19 +81,14 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
       });
 
       resultData = await geminiRes.json();
+      if (geminiRes.ok) break;
 
-      if (geminiRes.ok) {
-        break; // 성공 시 탈출
-      }
-
-      // 트래픽 폭증 에러(503 또는 고부하 메시지)인 경우 2초 대기 후 재시도
       const errorMessage = resultData.error?.message || '';
       if (attempt < maxRetries && (geminiRes.status === 503 || errorMessage.includes('high demand'))) {
         console.warn(`Attempt ${attempt} failed due to high demand. Retrying in 2 seconds...`);
         await new Promise(resolve => setTimeout(resolve, 2000));
         continue;
       }
-
       break;
     }
 
