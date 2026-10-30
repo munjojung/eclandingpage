@@ -144,5 +144,43 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
     }
   }
 
+  // 3️⃣ 휴대폰 번호 조회 (Check) 로직
+  if (action === 'check') {
+    try {
+      const { phone } = req.body;
+      const connectionString = process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL;
+      
+      if (!connectionString || !phone) {
+        return res.status(400).json({ success: false, error: '전화번호 또는 DB 설정이 누락되었습니다.' });
+      }
+
+      const sql = neon(connectionString);
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+
+      const rows = await sql`
+        SELECT * FROM applicants 
+        WHERE REPLACE(phone, '-', '') = ${cleanPhone} 
+        LIMIT 1
+      `;
+
+      if (rows && rows.length > 0) {
+        return res.status(200).json({ 
+          success: true, 
+          data: {
+            group_no: rows[0].group_no || '1',
+            date: rows[0].date || '2026년 최신 세션',
+            facilitator: rows[0].facilitator || '관리자',
+            members: rows[0].members || rows[0].name || phone
+          } 
+        });
+      } else {
+        return res.status(404).json({ success: false, error: '등록되지 않은 휴대폰 번호입니다.' });
+      }
+    } catch (error) {
+      console.error('Check Error:', error);
+      return res.status(500).json({ success: false, error: '조회 중 서버 오류가 발생했습니다.' });
+    }
+  }
+
   return res.status(400).json({ success: false, error: 'Invalid Action' });
 }

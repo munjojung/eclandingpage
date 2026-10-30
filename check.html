@@ -62,10 +62,11 @@
         const cleanPhone = phone.replace(/[^0-9]/g, '');
 
         try {
-            const res = await fetch('/api/check', {
+            // 📌 통합 API 경로(/api/worksheet)로 요청하도록 수정 및 action: 'check' 전달
+            const res = await fetch('/api/worksheet', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone })
+                body: JSON.stringify({ action: 'check', phone })
             });
 
             const result = await res.json();
@@ -77,7 +78,7 @@
                 document.getElementById('resMembers').innerText = result.data.members || phone;
                 resultArea.style.display = 'block';
             } else {
-                // 💡 만약 DB에 데이터가 없거나 010 번호인 경우 프론트엔드 Fallback 처리 (테스트용 편의 기능)
+                // DB에 없을 때 또는 테스트용 010 번호 Fallback[cite: 12]
                 if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
                     document.getElementById('resGroupName').innerText = `🎉 Group #1 배정 완료 (임시 인증)`;
                     document.getElementById('resDate').innerText = '2026년 최신 세션';
@@ -92,7 +93,7 @@
             }
         } catch (err) {
             console.error('Check Group Error:', err);
-            // 네트워크 오류 시에도 010 번호면 임시 허용
+            // 네트워크 오류 시에도 010 번호면 임시 허용[cite: 12]
             if (cleanPhone.startsWith('010') && cleanPhone.length >= 10) {
                 document.getElementById('resGroupName').innerText = `🎉 Group #1 배정 완료 (오프라인 모드)`;
                 document.getElementById('resDate').innerText = '2026년 최신 세션';
