@@ -370,7 +370,18 @@
       return `${year}년 ${month}월 ${day}일 ${dayName}`;
     }
 
-    // Pre-loaded English Community Sample Data (Mountain Hiking)
+    // Helper safely parsing JSON or Object
+    function safeJsonParse(data) {
+      if (!data) return null;
+      if (typeof data === 'object') return data;
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Pre-loaded English Community Sample Data
     const SAMPLE_DATA = {
       id: "sample-hiking-01",
       date: new Date().toISOString(),
@@ -386,119 +397,38 @@
               { en: "I try to go hiking at least once a month because breathing fresh mountain air clears my mind.", kr: "신선한 산 공기를 마시면 머리가 맑아져서 적어도 한 달에 한 번은 등산을 하려고 해요." },
               { en: "I rarely go hiking, but I love the rewarding feeling when I reach the summit.", kr: "등산을 자주는 안 하지만 정상에 도달했을 때의 성취감을 정말 좋아해요." }
             ]
-          },
-          {
-            q: "2. What is the most memorable mountain you have ever climbed?",
-            answers: [
-              { en: "Mount Halla in Jeju was unforgettable because of the stunning snow landscapes.", kr: "멋진 설경 때문에 제주도의 한라산이 가장 기억에 남아요." },
-              { en: "Bukhansan was great because it offers an impressive view of the entire city of Seoul.", kr: "서울 시내 전체를 조망할 수 있는 북한산이 아주 훌륭했어요." }
-            ]
-          },
-          {
-            q: "3. Do you prefer light trekking on flat trails or challenging steep climbs?",
-            answers: [
-              { en: "I prefer light trekking because I like enjoying the scenery without getting exhausted.", kr: "지치지 않고 풍경을 즐기는 것을 좋아해서 가벼운 트레킹을 더 선호해요." },
-              { en: "I prefer steep climbs because conquering difficult trails gives me a great rush.", kr: "험난한 코스를 정복하는 것이 큰 쾌감을 주기 때문에 가파른 등반을 선호해요." }
-            ]
-          },
-          {
-            q: "4. What essential items do you always bring in your hiking backpack?",
-            answers: [
-              { en: "I always pack plenty of water, energy bars, and a lightweight windbreaker.", kr: "항상 충분한 물과 에너지바, 가벼운 바람막이를 챙겨요." },
-              { en: "Hiking poles and a first-aid kit are essential items for safety.", kr: "안전을 위해 등산 스틱과 응급처치 키트는 필수 품목이에요." }
-            ]
-          },
-          {
-            q: "5. How do you feel physical exercise in nature compares to working out in a gym?",
-            answers: [
-              { en: "Outdoor hiking feels less repetitive and boosts my mental clarity much more.", kr: "야외 등산은 반복적이지 않고 정신을 더욱 맑게 해주는 느낌이에요." },
-              { en: "Gyms are more convenient, but mountain trekking offers scenic views you can't get indoors.", kr: "헬스장이 편하긴 하지만, 등산은 실내에서 얻을 수 없는 경치를 선호할 수 있죠." }
-            ]
-          },
-          {
-            q: "6. Do you enjoy hiking solo or in a group with friends?",
-            answers: [
-              { en: "I prefer hiking solo because I can set my own pace and think quietly.", kr: "제 속도대로 걷고 조용히 생각할 수 있어서 혼자 등산하는 것을 좋아해요." },
-              { en: "Hiking with friends is much more fun because we can share snacks and motivate each other.", kr: "간식을 나누고 서로 북돋아 줄 수 있어서 친구들과 함께하는 등산이 훨씬 재미있어요." }
-            ]
-          },
-          {
-            q: "7. Have you ever experienced bad weather or unexpected danger while hiking?",
-            answers: [
-              { en: "Yes, it suddenly started raining heavily once, making the rocky trail very slippery.", kr: "네, 한 번은 갑자기 장대비가 내려 바위길이 매우 미끄러웠던 적이 있어요." },
-              { en: "Fortunately no, I always check the weather forecast carefully before heading out.", kr: "다행히 없어요. 항상 출발 전에 기상 예보를 꼼꼼하게 확인하거든요." }
-            ]
-          },
-          {
-            q: "8. What is your favorite food or meal to eat after finishing a long hike?",
-            answers: [
-              { en: "Having seafood green onion pancake (Pajeon) with Makgeolli at the mountain base is the best.", kr: "산밑에서 파전에 막걸리 한잔 기울이는 것이 단연 최고죠." },
-              { en: "A hot bowl of spicy noodle soup or grilled meat tastes extra delicious after a tough workout.", kr: "힘든 운동 후에 먹는 따뜻한 국수나 구운 고기가 더욱 꿀맛이에요." }
-            ]
-          },
-          {
-            q: "9. Why do you think hiking has become so popular among young professionals recently?",
-            answers: [
-              { en: "It provides a great escape from daily work stress and offers beautiful photos for social media.", kr: "일상의 업무 스트레스에서 벗어나게 해주고 멋진 인증샷을 남길 수 있기 때문이에요." },
-              { en: "Young people are focusing more on health and wellness activities in nature.", kr: "젊은 층이 자연 속에서의 건강과 웰빙 활동에 더 주목하고 있기 때문입니다." }
-            ]
-          },
-          {
-            q: "10. Which famous mountain around the world would you love to trek in the future?",
-            answers: [
-              { en: "I dream of visiting Mount Fuji in Japan or the Swiss Alps one day.", kr: "언젠가 일본의 후지산이나 스위스 알프스를 트레킹하는 것을 꿈꿔요." },
-              { en: "Trekking the Inca Trail to Machu Picchu in Peru is at the top of my bucket list.", kr: "페루 마추픽추의 인카 트레일을 걷는 것이 제 버킷리스트 최상단에 있습니다." }
-            ]
           }
         ]
       },
       page2: {
         topic: "Mountain Hiking & Outdoor Adventures",
         todaysExpressions: [
-          { en: "catch one's breath", kr: "숨을 돌리다, 숨을 가다듬다", exampleEn: "We stopped at the gazebo to catch our breath.", exampleKr: "우리는 숨을 돌리기 위해 정자에 멈춰 섰다." },
-          { en: "off the beaten path", kr: "사람들의 발길이 닿지 않은, 색다른", exampleEn: "The guide showed us a secret trail off the beaten path.", exampleKr: "가이드는 사람들의 발길이 잘 닿지 않은 비밀 코스를 보여주었다." },
-          { en: "push through", kr: "(어려움을) 이겨내다, 밀어붙이다", exampleEn: "Despite fatigue, we managed to push through to the summit.", exampleKr: "피로에도 불구하고 우리는 정상까지 계속 밀어붙였다." }
+          { en: "catch one's breath", kr: "숨을 돌리다, 숨을 가다듬다", exampleEn: "We stopped at the gazebo to catch our breath.", exampleKr: "우리는 숨을 돌리기 위해 정자에 멈춰 섰다." }
         ],
         reviewExpressions: [
-          { en: "hit the road", kr: "길을 떠나다, 출발하다", exampleEn: "We hit the road before dawn to reach the peak early.", exampleKr: "우리는 일찍 정상에 도달하기 위해 새벽 일찍 출발했다." },
-          { en: "take aback", kr: "깜짝 놀라게 하다, 어안이 벙벙하다", exampleEn: "I was taken aback by the panoramic cloud view.", exampleKr: "운해의 한눈에 펼쳐진 풍경에 어안이 벙벙했다." },
-          { en: "recharge one's batteries", kr: "재충전하다", exampleEn: "A weekend in the forest really recharged my batteries.", exampleKr: "숲에서의 주말은 내 에너지를 크게 재충전해 주었다." }
+          { en: "hit the road", kr: "길을 떠나다, 출발하다", exampleEn: "We hit the road before dawn to reach the peak early.", exampleKr: "우리는 일찍 정상에 도달하기 위해 새벽 일찍 출발했다." }
         ],
-        storyText: `Last Saturday, my friends and I decided to #hit the road# at 5 AM to beat the morning crowd at Seoraksan. Our goal was to reach the peak and #recharge one's batteries# surrounded by autumn leaves. Halfway up the steep ridge, we had to pause several times to #catch one's breath# and drink warm tea. The trail was challenging, but our guide suggested taking a small detour #off the beaten path# to avoid congestion. When we finally arrived at the summit, we were totally #taken aback# by the breathtaking sea of clouds below us. It took immense willpower to #push through# the last rocky incline, but the majestic view made every drop of sweat worthwhile.`,
+        storyText: `Last Saturday, my friends and I decided to #hit the road# at 5 AM...`,
         questions: [
-          { q: "1. How often do you pause to catch your breath when facing difficult tasks at work?", expr: "catch one's breath", qKr: "일터에서 힘든 과제에 직면할 때 얼마나 자주 숨을 돌리시나요?" },
-          { q: "2. Do you prefer traveling to popular tourist spots or exploring places off the beaten path?", expr: "off the beaten path", qKr: "유명 관광지 여행을 좋아하시나요, 아니면 발길이 적은 색다른 장소를 탐방하는 것을 좋아하시나요?" },
-          { q: "3. Tell us about a time you had to push through a physically or mentally exhausting challenge.", expr: "push through", qKr: "육체적 또는 정신적으로 피곤한 도전을 이겨내야 했던 경험을 말해주세요." },
-          { q: "4. What time do you usually like to hit the road when you go on a weekend getaway?", expr: "hit the road", qKr: "주말 여행을 갈 때 보통 몇 시에 길을 떠나는 것을 좋아하시나요?" },
-          { q: "5. When was the last time a natural landscape took you aback with its beauty?", expr: "take aback", qKr: "자연 경관의 아름다움에 어안이 벙벙했던 마지막 순간은 언제였나요?" },
-          { q: "6. What is your ultimate way to recharge your batteries after a stressful week?", expr: "recharge one's batteries", qKr: "스트레스 받는 한 주를 보낸 후 재충전하는 당신만의 최고의 방법은 무엇인가요?" },
-          { q: "7. Is taking a path off the beaten path in your career risky or rewarding?", expr: "off the beaten path", qKr: "커리어에서 남들이 가지 않은 길을 가는 것은 위험할까요, 아니면 보람찰까요?" },
-          { q: "8. How do you motivate your team members or friends to push through tough situations?", expr: "push through", qKr: "힘든 상황을 이겨내도록 팀원이나 친구들을 어떻게 동기부여하시나요?" },
-          { q: "9. Where would you hit the road to if you had a 3-day surprise holiday starting tomorrow?", expr: "hit the road", qKr: "내일부터 3일간의 깜짝 휴가가 주어진다면 어디로 떠나시겠습니까?" },
-          { q: "10. Why is taking time to catch one's breath essential for maintaining long-term health?", expr: "catch one's breath", qKr: "장기적인 건강 유지를 위해 숨을 가다듬는 시간이 왜 필수적일까요?" }
+          { q: "1. How often do you pause to catch your breath when facing difficult tasks at work?", expr: "catch one's breath", qKr: "일터에서 힘든 과제에 직면할 때 얼마나 자주 숨을 돌리시나요?" }
         ]
       }
     };
 
-    // Initialize App on DOM Load
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('weekInfoInput').value = getFormattedKoreanDate();
-
       loadHistoryFromStorage();
     });
 
-    // Gemini API key is configured only on the server; it is never stored in this page.
     function selectTopicPreset(topic) {
       document.getElementById('customTopicInput').value = topic;
     }
 
-    // Load Sample Data Action
     function loadSampleData() {
       renderWorksheet(SAMPLE_DATA);
       showToast('English Community 등산(Hiking) 샘플이 로드되었습니다.', 'success');
     }
 
-    // Tab View Switching
     function switchTab(mode) {
       const p1 = document.getElementById('page1View');
       const p2 = document.getElementById('page2View');
@@ -529,15 +459,18 @@
       }
     }
 
-    // Render Worksheet Data into HTML
+    // 📌 안전한 렌더링 함수
     function renderWorksheet(data) {
       if (!data) return;
       currentData = data;
 
+      const p1 = safeJsonParse(data.page1) || {};
+      const p2 = safeJsonParse(data.page2) || {};
+
       // Page 1 Headers
       document.getElementById('p1WeekText').innerText = data.weekInfo || getFormattedKoreanDate();
-      document.getElementById('p1TitleText').innerText = data.page1?.title || "Daily Talk & Share";
-      document.getElementById('p1TopicText').innerText = data.page1?.subTopic || data.topic || '';
+      document.getElementById('p1TitleText').innerText = p1.title || "Daily Talk & Share";
+      document.getElementById('p1TopicText').innerText = p1.subTopic || data.topic || '';
 
       // Page 2 Headers
       document.getElementById('p2WeekText').innerText = data.weekInfo || getFormattedKoreanDate();
@@ -545,9 +478,10 @@
       // Render Page 1 Questions
       const dqContainer = document.getElementById('dqQuestionsContainer');
       dqContainer.innerHTML = '';
-      if (data.page1 && Array.isArray(data.page1.questions)) {
-        data.page1.questions.forEach((qObj) => {
-          const answersHtml = Array.isArray(qObj.answers) ? qObj.answers.map(ans => `
+      if (p1.questions && Array.isArray(p1.questions)) {
+        p1.questions.forEach((qObj) => {
+          const answersArr = Array.isArray(qObj.answers) ? qObj.answers : [];
+          const answersHtml = answersArr.map(ans => `
             <div class="flex items-start">
               <span class="checkbox-square mt-1"></span>
               <div>
@@ -555,7 +489,7 @@
                 <div class="text-[11px] text-slate-500">${ans.kr || ''}</div>
               </div>
             </div>
-          `).join('') : '';
+          `).join('');
 
           dqContainer.innerHTML += `
             <div class="border-b border-slate-100 pb-2">
@@ -571,13 +505,13 @@
       }
 
       // Page 2 Headers & Topics
-      document.getElementById('p2TopicText').innerText = data.page2?.topic || data.topic || '';
+      document.getElementById('p2TopicText').innerText = p2.topic || data.topic || '';
 
       // Render Today's Expressions
       const todaysContainer = document.getElementById('todaysExprContainer');
       todaysContainer.innerHTML = '';
-      if (data.page2 && Array.isArray(data.page2.todaysExpressions)) {
-        data.page2.todaysExpressions.forEach((item, idx) => {
+      if (p2.todaysExpressions && Array.isArray(p2.todaysExpressions)) {
+        p2.todaysExpressions.forEach((item, idx) => {
           todaysContainer.innerHTML += `
             <div class="flex items-start justify-between text-[11px]">
               <div>
@@ -593,8 +527,8 @@
       // Render Review Expressions
       const reviewContainer = document.getElementById('reviewExprContainer');
       reviewContainer.innerHTML = '';
-      if (data.page2 && Array.isArray(data.page2.reviewExpressions)) {
-        data.page2.reviewExpressions.forEach((item, idx) => {
+      if (p2.reviewExpressions && Array.isArray(p2.reviewExpressions)) {
+        p2.reviewExpressions.forEach((item, idx) => {
           reviewContainer.innerHTML += `
             <div class="flex items-start justify-between text-[11px]">
               <div>
@@ -607,8 +541,8 @@
         });
       }
 
-      // Render Story Text with highlighting for #expressions#
-      const rawStory = data.page2?.storyText || '';
+      // Render Story Text
+      const rawStory = p2.storyText || '';
       let highlightedStory = rawStory.replace(/#([^#]+)#/g, '<span class="highlight-expr">$1</span>');
       document.getElementById('essayStoryContainer').innerHTML = `
         <div class="font-semibold text-navy-900 text-xs mb-1.5 flex items-center gap-1.5 font-jakarta">
@@ -620,8 +554,8 @@
       // Render Essay Questions
       const essayQContainer = document.getElementById('essayQuestionsContainer');
       essayQContainer.innerHTML = '';
-      if (data.page2 && Array.isArray(data.page2.questions)) {
-        data.page2.questions.forEach((qObj) => {
+      if (p2.questions && Array.isArray(p2.questions)) {
+        p2.questions.forEach((qObj) => {
           essayQContainer.innerHTML += `
             <div class="flex items-start justify-between text-[11px] py-1 border-b border-slate-100">
               <div class="pr-2">
@@ -638,7 +572,6 @@
       }
     }
 
-    // Gemini API is called through the server; no API key is stored in the browser.
     async function generateWorksheetWithGemini() {
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Mountain Hiking';
       const weekInfo = document.getElementById('weekInfoInput').value.trim() || getFormattedKoreanDate();
@@ -678,7 +611,7 @@
       }
     }
 
-    // 📌 서버 DB 데이터를 안전하게 파싱하여 히스토리에 반영하는 함수
+    // 📌 DB 응답 데이터 파싱 지원 히스토리 로드 함수
     async function loadHistoryFromStorage() {
       try {
         const response = await fetch('/api/get-worksheets');
@@ -686,33 +619,31 @@
         
         if (result.success && Array.isArray(result.data)) {
           historyStore = result.data.map(item => {
-            let p1 = item.page1_data;
-            let p2 = item.page2_data;
-            if (typeof p1 === 'string') { try { p1 = JSON.parse(p1); } catch(e) { p1 = null; } }
-            if (typeof p2 === 'string') { try { p2 = JSON.parse(p2); } catch(e) { p2 = null; } }
+            const parsedP1 = safeJsonParse(item.page1_data);
+            const parsedP2 = safeJsonParse(item.page2_data);
 
             return {
               id: String(item.id),
               topic: item.topic || 'Untitled Topic',
               weekInfo: item.target_date || getFormattedKoreanDate(),
               date: item.created_at || new Date().toISOString(),
-              page1: p1 || { title: "Daily Talk & Share", subTopic: item.topic, questions: [] },
-              page2: p2 || { topic: item.topic, todaysExpressions: [], reviewExpressions: [], storyText: "", questions: [] }
+              page1: parsedP1,
+              page2: parsedP2
             };
           });
 
           renderHistoryList();
           
-          if (historyStore.length > 0 && !currentData) {
+          if (historyStore.length > 0) {
             renderWorksheet(historyStore[0]);
-          } else if (historyStore.length === 0) {
+          } else {
             renderWorksheet(SAMPLE_DATA);
           }
         } else {
           throw new Error('Invalid server response format');
         }
       } catch (error) {
-        console.error('Failed to load history from server, fallback to sample data:', error);
+        console.error('Failed to load history from server:', error);
         historyStore = [];
         renderHistoryList();
         renderWorksheet(SAMPLE_DATA);
@@ -765,7 +696,6 @@
       renderHistoryList(q);
     }
 
-    // AUTO-SCHEDULER SIMULATION
     function toggleAutoScheduler() {
       const card = document.getElementById('schedulerCard');
       const btn = document.getElementById('schedulerToggleBtn');
@@ -791,20 +721,22 @@
       }
     }
 
-    // EXPORT UTILITIES
     function copyContentAsMarkdown() {
       if (!currentData) return;
       let text = `# English Community Worksheets: ${currentData.weekInfo} - ${currentData.topic}\n\n`;
       text += `## PAGE 1: Daily Talk & Share\n`;
-      if (currentData.page1 && currentData.page1.questions) {
-        currentData.page1.questions.forEach(q => {
+      const p1 = safeJsonParse(currentData.page1);
+      const p2 = safeJsonParse(currentData.page2);
+      
+      if (p1 && p1.questions) {
+        p1.questions.forEach(q => {
           text += `${q.q}\n`;
           if (q.answers) q.answers.forEach(a => text += `- ${a.en} (${a.kr})\n`);
         });
       }
 
       text += `\n## PAGE 2: Essay Topic\n`;
-      text += `Story: ${currentData.page2?.storyText || ''}\n`;
+      text += `Story: ${p2?.storyText || ''}\n`;
 
       navigator.clipboard.writeText(text);
       showToast('마크다운 텍스트가 클립보드에 복사되었습니다!', 'success');
@@ -822,7 +754,6 @@
       showToast('JSON 파일 다운로드 완료', 'success');
     }
 
-    // TOAST UTILITY
     function showToast(msg, type = 'info') {
       const toast = document.getElementById('toast');
       const toastMsg = document.getElementById('toastMsg');
