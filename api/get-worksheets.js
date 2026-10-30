@@ -10,9 +10,9 @@ export default async function handler(req, res) {
   try {
     const sql = neon(process.env.DATABASE_URL);
     
-    // 📌 worksheets 테이블에서 페이지 데이터까지 포함하여 최근 30개 조회
+    // 📌 worksheets 테이블에서 file_name 컬럼을 포함하여 최근 30개 조회
     const worksheets = await sql`
-      SELECT id, topic, target_date, page1_data, page2_data, created_at 
+      SELECT id, topic, target_date, page1_data, page2_data, file_name, created_at 
       FROM worksheets 
       ORDER BY id DESC 
       LIMIT 30;
