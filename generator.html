@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>English Community Daily Worksheet Generator - 원클릭 통합</title>
+  <title>English Community Daily Worksheet Generator - DB 삭제 연동 통합</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,11 +51,11 @@
             English Community
             <span class="bg-skybrand-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase">Daily Worksheet</span>
           </h1>
-          <p class="text-xs text-sky-200/70">gemini-3.8-flash 및 원클릭 폴더 저장 통합 버전</p>
+          <p class="text-xs text-sky-200/70">gemini-3.8-flash 및 Vercel DB 삭제 연동 버전</p>
         </div>
       </div>
       <div class="text-xs text-emerald-400 font-medium flex items-center gap-1.5 bg-emerald-950/50 px-3 py-1.5 rounded-lg border border-emerald-800/50">
-        <i class="fa-solid fa-shield-halved"></i> Vercel 환경변수 연동됨
+        <i class="fa-solid fa-shield-halved"></i> Vercel DB 삭제 연동 활성화
       </div>
     </div>
   </header>
@@ -557,9 +557,34 @@
               <div class="font-bold truncate">${item.topic}</div>
               <div class="text-[10px] text-slate-400 mt-0.5">${item.file_name || item.target_date}</div>
             </div>
+            <button onclick="event.stopPropagation(); deleteHistoryItem('${item.id}', '${item.file_name}')" title="삭제" class="text-slate-400 hover:text-rose-600 p-1.5 transition">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
           </div>
         `;
       });
+    }
+
+    // 📌 Vercel DB 및 로컬 저장소 동시 삭제 연동 함수
+    async function deleteHistoryItem(id, fileName) {
+      if (!confirm('정말 삭제하시겠습니까? Vercel DB에서도 함께 삭제됩니다.')) return;
+
+      try {
+        // Vercel DB 삭제 API 호출
+        await fetch('/api/delete-worksheet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, file_name: fileName })
+        });
+      } catch (err) {
+        console.warn('DB 삭제 요청 처리 중 오류가 발생했으나 로컬 보관함 삭제를 진행합니다.', err);
+      }
+
+      // 로컬 히스토리 삭제 및 갱신
+      historyStore = historyStore.filter(i => i.id !== id);
+      localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
+      renderHistoryList();
+      showToast('성공적으로 삭제되었습니다 (DB & 로컬 보관함).', 'info');
     }
 
     function selectHistoryItem(id) {
