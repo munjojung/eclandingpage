@@ -1,3 +1,4 @@
+import { neon } from '@neondatabase/serverless';
 import { verifyAdminSession, requireSameOrigin } from './_lib/admin-session.js';
 
 const MAX_TOPIC_LENGTH = 160;
@@ -86,7 +87,7 @@ Create 10 page1 questions, 5 today's expressions, 5 review expressions, and 10 p
 `;
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
@@ -122,6 +123,20 @@ Create 10 page1 questions, 5 today's expressions, 5 review expressions, and 10 p
     data.weekInfo = weekInfo || data.weekInfo || '';
     data.page1.subTopic = data.page1.subTopic || topic;
     data.page2.topic = data.page2.topic || topic;
+
+    // 📌 생성된 학습지를 Neon DB worksheets 테이블에 자동 저장
+    if (process.env.DATABASE_URL) {
+      try {
+        const sql = neon(process.env.DATABASE_URL);
+        await sql`
+          INSERT INTO worksheets (topic, target_date, page1_data, page2_data, created_at)
+          VALUES (${data.topic}, ${data.weekInfo}, ${JSON.stringify(data.page1)}, ${JSON.stringify(data.page2)}, NOW())
+        `;
+      } catch (dbError) {
+        console.error('Neon DB Auto-save Error:', dbError);
+        // DB 저장에 실패해도 프론트엔드 표시는 정상 동작하도록 에러를 삼키거나 로깅만 합니다.
+      }
+    }
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
