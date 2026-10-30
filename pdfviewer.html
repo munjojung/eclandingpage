@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF 뷰어 - 원클릭 통합 자동 연동</title>
+  <title>PDF 뷰어 - Vercel DB 목록 선택 및 원클릭 연동</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -16,21 +16,25 @@
   <!-- Top Control Bar -->
   <header class="bg-white border-b border-slate-300 shadow-sm sticky top-0 z-50 py-3 w-full flex flex-col gap-2 px-4">
     <div class="max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-100 pb-2">
+      
+      <!-- 학습지 선택 셀렉트박스 (DB 연동) -->
       <div class="flex items-center gap-2 overflow-hidden flex-1">
         <i class="fa-solid fa-database text-sky-600 flex-shrink-0"></i>
-        <span class="font-semibold text-slate-700 flex-shrink-0">DB 연동 경로:</span>
-        <input type="text" id="defaultPathDisplay" readonly class="px-2 py-1 bg-slate-50 border border-slate-300 rounded-md text-slate-600 flex-1 font-mono text-xs" value="C:\Users\Quito\Documents\private_pdfs">
+        <span class="font-semibold text-slate-700 flex-shrink-0">학습지 선택:</span>
+        <select id="worksheetSelect" onchange="onWorksheetSelected()" class="px-2 py-1 bg-slate-50 border border-slate-300 rounded-md text-slate-700 flex-1 font-medium text-xs truncate max-w-md">
+          <option value="">Vercel DB 목록 로딩 중...</option>
+        </select>
       </div>
       
+      <!-- 액션 버튼 그룹 -->
       <div class="flex items-center gap-2 flex-shrink-0">
-        <button onclick="openMatchedPdfFile()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5 text-sm">
+        <button onclick="openSelectedPdfFile()" class="bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 rounded-lg shadow-sm transition font-medium flex items-center gap-1.5">
           <i class="fa-solid fa-bolt"></i>
-          <span>원클릭 최신 파일 열기</span>
+          <span>선택 파일 열기</span>
         </button>
-        <button onclick="resetFolderHandle()" title="저장된 폴더 권한 초기화 및 재선택" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2.5 py-2 rounded-lg transition text-xs">
+        <button onclick="resetFolderHandle()" title="저장된 폴더 권한 초기화" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg transition">
           <i class="fa-solid fa-folder-open"></i> 폴더변경
         </button>
-        <span id="fileNameDisplay" class="text-slate-500 italic max-w-[180px] truncate">DB 로딩 중...</span>
       </div>
     </div>
 
@@ -65,7 +69,7 @@
       
       <div id="loadingOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-20">
         <i class="fa-solid fa-spinner fa-spin text-sky-600 text-3xl"></i>
-        <p class="text-xs text-slate-600 font-medium" id="loadingText">Vercel DB 및 폴더 연동 준비 중...</p>
+        <p class="text-xs text-slate-600 font-medium" id="loadingText">Vercel DB 목록을 불러오는 중입니다...</p>
       </div>
     </div>
   </main>
@@ -77,6 +81,7 @@
     let pageNumPending = null;
     let scale = 1.0;
     let dbWorksheets = []; 
+    let selectedWorksheet = null;
     
     const canvas = document.getElementById('pdfCanvas');
     const ctx = canvas.getContext('2d');
@@ -85,11 +90,10 @@
     const pageNumInput = document.getElementById('pageNumInput');
     const pageCountElem = document.getElementById('pageCount');
     const zoomLevelElem = document.getElementById('zoomLevel');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const worksheetSelect = document.getElementById('worksheetSelect');
     const zoomToggleBtn = document.getElementById('zoomToggleBtn');
-    const defaultPathDisplay = document.getElementById('defaultPathDisplay');
 
-    // IndexedDB를 활용한 디렉토리 핸들 영구 저장 유틸리티
+    // IndexedDB를 활용한 디렉토리 핸들 영구 저장
     const DB_NAME = 'PdfViewerDB';
     const STORE_NAME = 'handles';
     const HANDLE_KEY = 'private_pdfs_dir';
@@ -125,9 +129,6 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      const savedPath = localStorage.getItem('ec_download_path');
-      if (savedPath) defaultPathDisplay.value = savedPath;
-
       await fetchDbWorksheets();
     });
 
@@ -138,8 +139,18 @@
         
         if (res.ok && result.success && Array.isArray(result.data) && result.data.length > 0) {
           dbWorksheets = result.data;
-          fileNameDisplay.textContent = `DB 연동 완료 (${dbWorksheets.length}개)`;
-          loadingText.textContent = "준비 완료. [원클릭 최신 파일 열기] 버튼을 누르세요.";
+          
+          // 셀렉트박스 옵션 동적 생성 (주제와 날짜 표시)
+          worksheetSelect.innerHTML = '';
+          dbWorksheets.forEach((item, index) => {
+            const opt = document.createElement('option');
+            opt.value = index;
+            opt.textContent = `[${item.target_date || '날짜미상'}] ${item.topic} (${item.file_name || '파일명 없음'})`;
+            worksheetSelect.appendChild(opt);
+          });
+
+          selectedWorksheet = dbWorksheets[0];
+          loadingText.textContent = "준비 완료. [선택 파일 열기] 버튼을 누르세요.";
           loadingOverlay.classList.add('hidden');
           return;
         }
@@ -147,8 +158,15 @@
         console.warn('DB API fetch error:', err);
       }
 
-      fileNameDisplay.textContent = 'DB 연동 실패';
+      worksheetSelect.innerHTML = '<option value="">DB 데이터 로드 실패</option>';
       loadingText.innerHTML = '<span class="text-rose-500">DB 데이터를 불러오지 못했습니다.</span>';
+    }
+
+    function onWorksheetSelected() {
+      const idx = worksheetSelect.value;
+      if (dbWorksheets[idx]) {
+        selectedWorksheet = dbWorksheets[idx];
+      }
     }
 
     async function resetFolderHandle() {
@@ -158,16 +176,16 @@
           const db = e.target.result;
           const tx = db.transaction(STORE_NAME, 'readwrite');
           tx.objectStore(STORE_NAME).delete(HANDLE_KEY);
-          alert('저장된 폴더 권한이 초기화되었습니다. [원클릭 최신 파일 열기]를 누르면 폴더를 다시 지정하실 수 있습니다.');
+          alert('폴더 권한이 초기화되었습니다. [선택 파일 열기]를 누르면 폴더를 다시 지정하실 수 있습니다.');
         };
       } catch (e) {
         console.error(e);
       }
     }
 
-    async function openMatchedPdfFile() {
-      if (dbWorksheets.length === 0) {
-        alert('DB 항목이 없습니다.');
+    async function openSelectedPdfFile() {
+      if (!selectedWorksheet) {
+        alert('선택된 학습지 항목이 없습니다.');
         return;
       }
 
@@ -186,37 +204,31 @@
           const perm = await dirHandle.queryPermission({ mode: 'read' });
           if (perm !== 'granted') {
             const reqPerm = await dirHandle.requestPermission({ mode: 'read' });
-            if (reqPerm !== 'granted') {
-              dirHandle = null;
-            }
+            if (reqPerm !== 'granted') dirHandle = null;
           }
         }
 
-        // 저장된 권한이 없거나 거부된 경우에만 폴더 선택 창 오픈
         if (!dirHandle) {
           loadingText.textContent = '지정 폴더(private_pdfs)를 선택해 주세요...';
           dirHandle = await window.showDirectoryPicker();
           await saveDirHandle(dirHandle);
         }
 
-        loadingText.textContent = '최신 학습지 파일 매칭 중...';
+        loadingText.textContent = `"${selectedWorksheet.topic}" 관련 파일 매칭 중...`;
         
         let manifestData = null;
         try {
           const manifestHandle = await dirHandle.getFileHandle('manifest.json');
           const manifestFile = await manifestHandle.getFile();
-          const manifestText = await manifestFile.text();
-          manifestData = JSON.parse(manifestText);
+          manifestData = JSON.parse(await manifestFile.text());
         } catch (e) {
-          console.warn('manifest.json 로드 불가 또는 없음:', e);
+          console.warn('manifest.json 로드 불가:', e);
         }
 
-        const latestDbItem = dbWorksheets[0]; 
-        let targetFileName = latestDbItem.file_name || '';
-
+        let targetFileName = selectedWorksheet.file_name || '';
         let timeStamp = '';
-        if (latestDbItem.created_at) {
-          const d = new Date(latestDbItem.created_at);
+        if (selectedWorksheet.created_at) {
+          const d = new Date(selectedWorksheet.created_at);
           if (!isNaN(d.getTime())) {
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -229,24 +241,23 @@
 
         let targetFileHandle = null;
 
+        // 1. manifest에서 파일명 매칭
         if (manifestData && Array.isArray(manifestData.pdfs)) {
           const matchedPdf = manifestData.pdfs.find(p => 
             p.fileName === targetFileName || (timeStamp && p.fileName.includes(timeStamp))
-          ) || manifestData.pdfs[0];
-
+          );
           if (matchedPdf) {
             try {
               targetFileHandle = await dirHandle.getFileHandle(matchedPdf.fileName);
-            } catch (err) {
-              console.warn('manifest 파일 탐색 실패:', err);
-            }
+            } catch (err) {}
           }
         }
 
+        // 2. 폴더 내 파일 직접 스캔 매칭
         if (!targetFileHandle) {
           for await (const entry of dirHandle.values()) {
             if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
-              if (timeStamp && entry.name.includes(timeStamp)) {
+              if ((targetFileName && entry.name === targetFileName) || (timeStamp && entry.name.includes(timeStamp))) {
                 targetFileHandle = entry;
                 break;
               }
@@ -254,6 +265,7 @@
           }
         }
 
+        // 3. Fallback: 첫 번째 PDF
         if (!targetFileHandle) {
           for await (const entry of dirHandle.values()) {
             if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
@@ -270,8 +282,6 @@
         }
 
         const file = await targetFileHandle.getFile();
-        fileNameDisplay.textContent = file.name;
-        fileNameDisplay.title = file.name;
         loadingText.textContent = `파일(${file.name}) 로딩 중...`;
 
         const arrayBuffer = await file.arrayBuffer();
@@ -291,8 +301,8 @@
         renderPage(pageNum);
         loadingOverlay.classList.add('hidden');
       }).catch(function(error) {
-        console.error('PDF Data Load Error:', error);
-        loadingText.innerHTML = '<span class="text-rose-500">PDF 파일을 읽어오는 중 오류가 발생했습니다.</span>';
+        console.error('PDF Load Error:', error);
+        loadingText.innerHTML = '<span class="text-rose-500">PDF 로딩 오류 발생</span>';
       });
     }
 
@@ -302,14 +312,7 @@
         const viewport = page.getViewport({ scale: scale });
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-
-        const renderContext = {
-          canvasContext: ctx,
-          viewport: viewport
-        };
-        const renderTask = page.render(renderContext);
-
-        renderTask.promise.then(function() {
+        page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
           pageRendering = false;
           if (pageNumPending !== null) {
             renderPage(pageNumPending);
@@ -321,63 +324,40 @@
       zoomLevelElem.textContent = Math.round(scale * 100) + '%';
     }
 
-    function queueRenderPage(num) {
-      if (pageRendering) {
-        pageNumPending = num;
-      } else {
-        renderPage(num);
-      }
-    }
-
     document.getElementById('prevPage').addEventListener('click', () => {
       if (pageNum <= 1) return;
       pageNum--;
-      queueRenderPage(pageNum);
+      renderPage(pageNum);
     });
 
     document.getElementById('nextPage').addEventListener('click', () => {
       if (pageNum >= pdfDoc.numPages) return;
       pageNum++;
-      queueRenderPage(pageNum);
-    });
-
-    pageNumInput.addEventListener('change', (e) => {
-      let num = parseInt(e.target.value);
-      if (num >= 1 && num <= pdfDoc.numPages) {
-        pageNum = num;
-        queueRenderPage(pageNum);
-      } else {
-        pageNumInput.value = pageNum;
-      }
+      renderPage(pageNum);
     });
 
     document.getElementById('zoomIn').addEventListener('click', () => {
       scale = Math.min(scale + 0.2, 5.0);
-      zoomToggleBtn.textContent = "폭 맞춤";
-      queueRenderPage(pageNum);
+      renderPage(pageNum);
     });
 
     document.getElementById('zoomOut').addEventListener('click', () => {
       scale = Math.max(scale - 0.2, 0.2);
-      zoomToggleBtn.textContent = "폭 맞춤";
-      queueRenderPage(pageNum);
+      renderPage(pageNum);
     });
 
     zoomToggleBtn.addEventListener('click', () => {
       if (!pdfDoc) return;
-
       if (zoomToggleBtn.textContent === "폭 맞춤") {
-        pdfDoc.getPage(pageNum).then(function(page) {
-          const unscaledViewport = page.getViewport({ scale: 1.0 });
-          const availableWidth = window.innerWidth - 80; 
-          scale = availableWidth / unscaledViewport.width;
-          zoomToggleBtn.textContent = "100%로 보기";
-          queueRenderPage(pageNum);
+        pdfDoc.getPage(pageNum).then(page => {
+          scale = (window.innerWidth - 80) / page.getViewport({ scale: 1.0 }).width;
+          zoomToggleBtn.textContent = "100%";
+          renderPage(pageNum);
         });
       } else {
         scale = 1.0;
         zoomToggleBtn.textContent = "폭 맞춤";
-        queueRenderPage(pageNum);
+        renderPage(pageNum);
       }
     });
   </script>
