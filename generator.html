@@ -419,12 +419,20 @@
       });
     }
 
-    function startGenerationWithAuthCheck() {
-      const savedPw = sessionStorage.getItem('admin_pwd') || '';
-      if (!savedPw) {
-        openAuthModal();
-      } else {
-        generateWorksheetWithVercelAPI(savedPw);
+    async function startGenerationWithAuthCheck() {
+      try {
+        const response = await fetch('/api/auth/me', {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' }
+        });
+        if (response.ok) {
+          await generateWorksheetWithVercelAPI();
+        } else {
+          openAuthModal();
+        }
+      } catch (error) {
+        showToast('관리자 로그인 상태를 확인할 수 없습니다. 네트워크를 확인해 주세요.', 'error');
       }
     }
 
@@ -435,22 +443,41 @@
 
     function closeAuthModal() {
       document.getElementById('authModal').classList.add('hidden');
+      document.getElementById('adminPasswordInput').value = '';
     }
 
-    function confirmAuthAndGenerate() {
-      const pwInput = document.getElementById('adminPasswordInput').value.trim();
-      if (!pwInput) {
+    async function confirmAuthAndGenerate() {
+      const passwordInput = document.getElementById('adminPasswordInput');
+      const password = passwordInput.value;
+      if (!password) {
         alert('비밀번호를 입력해 주세요.');
         return;
       }
-      sessionStorage.setItem('admin_pwd', pwInput);
-      closeAuthModal();
-      generateWorksheetWithVercelAPI(pwInput);
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        const result = await response.json().catch(() => ({}));
+        passwordInput.value = '';
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || `로그인에 실패했습니다. (HTTP ${response.status})`);
+        }
+
+        closeAuthModal();
+        await generateWorksheetWithVercelAPI();
+      } catch (error) {
+        passwordInput.value = '';
+        showToast(error.message || '관리자 로그인에 실패했습니다.', 'error');
+      }
     }
 
     // 📌 통합 API 경로(/api/worksheet) 및 action: 'generate' 적용
-    async function generateWorksheetWithVercelAPI(pwd) {
-      const adminPassword = pwd || sessionStorage.getItem('admin_pwd') || '';
+    async function generateWorksheetWithVercelAPI() {
       const customTopic = document.getElementById('customTopicInput').value.trim() || 'Travel & Cultures';
       const targetDate = document.getElementById('targetDateInput').value || new Date().toISOString().split('T')[0];
       const weekInfo = getFormattedKoreanDate(targetDate);
@@ -465,24 +492,21 @@
       try {
         const response = await fetch('/api/worksheet', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({
             action: 'generate',
             topic: customTopic,
             weekInfo: weekInfo,
             target_date: targetDate,
             sequence: sequence,
-            file_name: fileName,
-            adminPassword: adminPassword
+            file_name: fileName
           })
         });
 
         const result = await response.json();
         if (!response.ok || !result.success) {
-          if (response.status === 401) {
-            sessionStorage.removeItem('admin_pwd');
-            openAuthModal();
-          }
+          if (response.status === 401) openAuthModal();
           throw new Error(result.error || `서버 오류 발생 (${response.status})`);
         }
 
@@ -626,31 +650,20 @@
       });
     }
 
-    // 관리자 인증이 필요한 통합 API 삭제 함수
-    // 서버가 삭제 성공을 확인한 경우에만 브라우저의 목록을 갱신합니다.
+    // 서버에서 세션 인증 및 DB 삭제가 성공한 경우에만 로컬 목록을 갱신합니다.
     async function deleteHistoryItem(id, fileName) {
-      if (!confirm('정말 삭제하시겠습니까? Vercel DB에서도 함께 삭제됩니다.')) {
-        return;
-      }
+      if (!confirm('정말 삭제하시겠습니까? Vercel DB에서도 함께 삭제됩니다.')) return;
 
-      // API는 id 또는 file_name 중 하나만 받습니다.
       const idText = id === null || id === undefined ? '' : String(id).trim();
       const numericId = Number(idText);
-      const hasNumericId =
-        idText !== '' &&
-        /^\d+$/.test(idText) &&
-        Number.isSafeInteger(numericId) &&
-        numericId > 0;
-
-      const normalizedFileName =
-        typeof fileName === 'string' ? fileName.trim() : '';
+      const hasNumericId = idText !== '' && /^\d+$/.test(idText) &&
+        Number.isSafeInteger(numericId) && numericId > 0;
+      const normalizedFileName = typeof fileName === 'string' ? fileName.trim() : '';
 
       let payload;
-      if (hasNumericId) {
-        payload = { action: 'delete', id: numericId };
-      } else if (normalizedFileName) {
-        payload = { action: 'delete', file_name: normalizedFileName };
-      } else {
+      if (hasNumericId) payload = { action: 'delete', id: numericId };
+      else if (normalizedFileName) payload = { action: 'delete', file_name: normalizedFileName };
+      else {
         showToast('삭제할 학습지 ID 또는 파일명이 없습니다.', 'error');
         return;
       }
@@ -659,61 +672,37 @@
         const response = await fetch('/api/worksheet', {
           method: 'POST',
           credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(payload)
         });
+        const result = await response.json().catch(() => null);
 
-        let result;
-        try {
-          result = await response.json();
-        } catch (_) {
-          result = null;
-        }
-
-        // 실패한 요청에서는 로컬 목록을 절대 변경하지 않습니다.
         if (!response.ok || !result || result.success !== true) {
           if (response.status === 401) {
             showToast('관리자 로그인이 필요하거나 세션이 만료되었습니다.', 'error');
-          } else if (response.status === 403) {
-            showToast('허용되지 않은 요청 출처입니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.', 'error');
+            openAuthModal();
           } else {
-            showToast(
-              (result && result.error) || `학습지 삭제에 실패했습니다. (HTTP ${response.status})`,
-              'error'
-            );
+            showToast((result && result.error) || `학습지 삭제에 실패했습니다. (HTTP ${response.status})`, 'error');
           }
           return;
         }
 
-        // 서버 삭제 성공 이후에만 해당 항목을 로컬 목록에서 제거합니다.
-        historyStore = historyStore.filter(item => {
-          if (hasNumericId) {
-            return String(item.id) !== idText;
-          }
-          return String(item.file_name || '').trim() !== normalizedFileName;
-        });
-
+        historyStore = historyStore.filter(item => hasNumericId
+          ? String(item.id) !== idText
+          : String(item.file_name || '').trim() !== normalizedFileName);
         localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
 
-        // 현재 표시 중인 학습지가 삭제 대상이면 남아 있는 첫 항목 또는 샘플을 표시합니다.
-        const currentMatches = currentData && (
-          hasNumericId
-            ? String(currentData.id) === idText
-            : String(currentData.file_name || '').trim() === normalizedFileName
-        );
-
+        const currentMatches = currentData && (hasNumericId
+          ? String(currentData.id) === idText
+          : String(currentData.file_name || '').trim() === normalizedFileName);
         if (currentMatches) {
-          if (historyStore.length > 0) {
-            renderWorksheet(historyStore[0]);
-          } else if (typeof SAMPLE_DATA !== 'undefined') {
-            renderWorksheet(SAMPLE_DATA);
-          }
+          if (historyStore.length > 0) renderWorksheet(historyStore[0]);
+          else if (typeof SAMPLE_DATA !== 'undefined') renderWorksheet(SAMPLE_DATA);
         }
-
         renderHistoryList();
         showToast(result.message || '학습지가 삭제되었습니다.', 'success');
-      } catch (err) {
-        console.error('DB 삭제 요청 처리 중 오류가 발생했습니다.', err);
+      } catch (error) {
+        console.error('DB 삭제 요청 처리 중 오류가 발생했습니다.', error);
         showToast('서버와 통신할 수 없습니다. 목록은 변경하지 않았습니다.', 'error');
       }
     }
