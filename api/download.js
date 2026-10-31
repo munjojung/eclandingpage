@@ -12,6 +12,6 @@ export default async function handler(req, res) {
   res.setHeader('Allow', 'GET');
   return res.status(410).json({
     success: false,
-    error: '온라인 PDF 다운로드는 현재 비활성화되어 있습니다. PDF는 관리자 PC에만 저장됩니다.'
+    error: '현재 PDF 다운로드 기능은 비활성화되어 있습니다. PDF 파일은 관리자 PC에만 보관됩니다.'
   });
 }
