@@ -1,3 +1,4 @@
+
 // api/worksheet.js
 import { neon } from '@neondatabase/serverless';
 import { verifyAdminSession, requireSameOrigin } from './_lib/admin-session.js';
@@ -5,7 +6,10 @@ import { verifyAdminSession, requireSameOrigin } from './_lib/admin-session.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'DELETE') {
     res.setHeader('Allow', 'POST, DELETE');
-    return res.status(405).json({ success: false, error: 'Method Not Allowed' });
+    return res.status(405).json({
+      success: false,
+      error: 'Method Not Allowed'
+    });
   }
 
   const body = req.body && typeof req.body === 'object' ? req.body : {};
@@ -14,30 +18,60 @@ export default async function handler(req, res) {
   // Worksheet generation and deletion are administrator-only operations.
   if (action === 'generate' || action === 'delete') {
     const originError = requireSameOrigin(req);
-    if (originError) return res.status(403).json({ success: false, error: originError });
+
+    if (originError) {
+      return res.status(403).json({
+        success: false,
+        error: originError
+      });
+    }
 
     try {
       const authenticated = await verifyAdminSession(req);
+
       if (!authenticated) {
-        return res.status(401).json({ success: false, error: '관리자 로그인이 필요하거나 세션이 만료되었습니다.' });
+        return res.status(401).json({
+          success: false,
+          error: '관리자 로그인이 필요하거나 세션이 만료되었습니다.'
+        });
       }
     } catch (error) {
       console.error('Worksheet session verification error:', error);
-      return res.status(500).json({ success: false, error: '관리자 세션 확인 중 서버 오류가 발생했습니다.' });
+
+      return res.status(500).json({
+        success: false,
+        error: '관리자 세션 확인 중 서버 오류가 발생했습니다.'
+      });
     }
   }
 
-  // 1️⃣ 학습지 생성 (Generate) 로직
+  // 1. 학습지 생성 (Generate)
   if (action === 'generate') {
     try {
-      const { topic, weekInfo, target_date, sequence, file_name } = body;
+      const {
+        topic,
+        weekInfo,
+        target_date,
+        sequence,
+        file_name
+      } = body;
+
       if (typeof topic !== 'string' || !topic.trim()) {
-        return res.status(400).json({ success: false, error: '학습지 주제를 입력해 주세요.' });
+        return res.status(400).json({
+          success: false,
+          error: '학습지 주제를 입력해 주세요.'
+        });
       }
 
-      const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '';
+      const apiKey = process.env.GEMINI_API_KEY
+        ? process.env.GEMINI_API_KEY.trim()
+        : '';
+
       if (!apiKey) {
-        return res.status(500).json({ success: false, error: 'Vercel에 GEMINI_API_KEY 환경 변수가 설정되어 있지 않습니다.' });
+        return res.status(500).json({
+          success: false,
+          error: 'Vercel에 GEMINI_API_KEY 환경 변수가 설정되어 있지 않습니다.'
+        });
       }
 
       const prompt = `You are an expert English curriculum writer for "English Community". 
@@ -90,119 +124,228 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
   }
 }`;
 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+      const endpoint =
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
       let geminiRes;
       let resultData;
-      let maxRetries = 3;
+      const maxRetries = 3;
       let attempt = 0;
 
       while (attempt < maxRetries) {
         attempt++;
+
         geminiRes = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt }
+                ]
+              }
+            ]
+          })
         });
 
         resultData = await geminiRes.json();
-        if (geminiRes.ok) break;
+
+        if (geminiRes.ok) {
+          break;
+        }
 
         const errorMessage = resultData.error?.message || '';
-        if (attempt < maxRetries && (geminiRes.status === 503 || errorMessage.includes('high demand'))) {
+
+        if (
+          attempt < maxRetries &&
+          (
+            geminiRes.status === 503 ||
+            errorMessage.includes('high demand')
+          )
+        ) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           continue;
         }
+
         break;
       }
 
       if (!geminiRes.ok) {
-        throw new Error(resultData.error?.message || `Gemini API 오류 발생 (${geminiRes.status})`);
+        throw new Error(
+          resultData.error?.message ||
+          `Gemini API 오류 발생 (${geminiRes.status})`
+        );
       }
 
-      let rawText = resultData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      let rawText =
+        resultData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      rawText = rawText
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
       const parsedJSON = JSON.parse(rawText);
 
-      return res.status(200).json({ success: true, data: parsedJSON });
+      return res.status(200).json({
+        success: true,
+        data: parsedJSON
+      });
+
     } catch (error) {
       console.error('Generate Error:', error);
-      return res.status(500).json({ success: false, error: error.message || '생성 중 오류 발생' });
+
+      return res.status(500).json({
+        success: false,
+        error: error.message || '생성 중 오류 발생'
+      });
     }
   }
 
-  // 2️⃣ DB 삭제 (Delete) 로직
+  // 2. DB 삭제 (Delete)
   if (action === 'delete') {
     try {
       const { id, file_name } = body;
-      const connectionString = process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL;
-      
+
+      const connectionString =
+        process.env.POSTGRES_URL_NON_POOLING ||
+        process.env.DATABASE_URL;
+
       if (!connectionString) {
-        return res.status(500).json({ success: false, error: 'DB 연결 문자열이 설정되지 않았습니다.' });
+        return res.status(500).json({
+          success: false,
+          error: 'DB 연결 문자열이 설정되지 않았습니다.'
+        });
       }
 
       const sql = neon(connectionString);
 
       if (!id && !file_name) {
-        return res.status(400).json({ success: false, error: '삭제할 ID 또는 파일명이 없습니다.' });
+        return res.status(400).json({
+          success: false,
+          error: '삭제할 ID 또는 파일명이 없습니다.'
+        });
       }
 
       let deletedRows;
-      if (id !== undefined && id !== null && String(id).trim() !== '' && Number.isSafeInteger(Number(id)) && Number(id) > 0) {
-        deletedRows = await sql`DELETE FROM worksheets WHERE id = ${Number(id)} RETURNING id`;
-      } else if (typeof file_name === 'string' && file_name.trim()) {
-        deletedRows = await sql`DELETE FROM worksheets WHERE file_name = ${file_name.trim()} RETURNING id`;
+
+      if (
+        id !== undefined &&
+        id !== null &&
+        String(id).trim() !== '' &&
+        Number.isSafeInteger(Number(id)) &&
+        Number(id) > 0
+      ) {
+        deletedRows = await sql`
+          DELETE FROM worksheets
+          WHERE id = ${Number(id)}
+          RETURNING id
+        `;
+      } else if (
+        typeof file_name === 'string' &&
+        file_name.trim()
+      ) {
+        deletedRows = await sql`
+          DELETE FROM worksheets
+          WHERE file_name = ${file_name.trim()}
+          RETURNING id
+        `;
       } else {
-        return res.status(400).json({ success: false, error: '유효한 ID 또는 파일명이 필요합니다.' });
+        return res.status(400).json({
+          success: false,
+          error: '유효한 ID 또는 파일명이 필요합니다.'
+        });
       }
 
       if (!deletedRows || deletedRows.length === 0) {
-        return res.status(404).json({ success: false, error: '삭제할 학습지 항목을 찾을 수 없습니다.' });
+        return res.status(404).json({
+          success: false,
+          error: '삭제할 학습지 항목을 찾을 수 없습니다.'
+        });
       }
-      return res.status(200).json({ success: true, message: 'DB 항목이 삭제되었습니다.' });
+
+      return res.status(200).json({
+        success: true,
+        message: 'DB 항목이 삭제되었습니다.'
+      });
+
     } catch (error) {
       console.error('Delete Error:', error);
-      return res.status(500).json({ success: false, error: 'DB 삭제 중 오류가 발생했습니다.' });
+
+      return res.status(500).json({
+        success: false,
+        error: 'DB 삭제 중 오류가 발생했습니다.'
+      });
     }
   }
 
-  // 3️⃣ 휴대폰 번호 조회 (Check) 로직
+  // 3. 휴대폰 번호 조회 (Check)
   if (action === 'check') {
     try {
       const { phone } = body;
-      const connectionString = process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL;
-      
+
+      const connectionString =
+        process.env.POSTGRES_URL_NON_POOLING ||
+        process.env.DATABASE_URL;
+
       if (!connectionString || !phone) {
-        return res.status(400).json({ success: false, error: '전화번호 또는 DB 설정이 누락되었습니다.' });
+        return res.status(400).json({
+          success: false,
+          error: '전화번호 또는 DB 설정이 누락되었습니다.'
+        });
+      }
+
+      const cleanPhone = String(phone).replace(/[^0-9]/g, '');
+
+      if (!cleanPhone) {
+        return res.status(400).json({
+          success: false,
+          error: '올바른 휴대폰 번호를 입력해 주세요.'
+        });
       }
 
       const sql = neon(connectionString);
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
 
+      // 입력 번호와 DB 번호 모두 숫자 이외의 문자를 제거한 후 비교
       const rows = await sql`
-        SELECT * FROM applicants 
-        WHERE REPLACE(phone, '-', '') = ${cleanPhone} 
+        SELECT *
+        FROM applicants
+        WHERE REGEXP_REPLACE(phone, '[^0-9]', '', 'g') = ${cleanPhone}
         LIMIT 1
       `;
 
       if (rows && rows.length > 0) {
-        return res.status(200).json({ 
-          success: true, 
+        return res.status(200).json({
+          success: true,
           data: {
             group_no: rows[0].group_no || '1',
             date: rows[0].date || '2026년 최신 세션',
             facilitator: rows[0].facilitator || '관리자',
             members: rows[0].members || rows[0].name || phone
-          } 
+          }
         });
       } else {
-        return res.status(404).json({ success: false, error: '등록되지 않은 휴대폰 번호입니다.' });
+        return res.status(404).json({
+          success: false,
+          error: '등록되지 않은 휴대폰 번호입니다.'
+        });
       }
+
     } catch (error) {
       console.error('Check Error:', error);
-      return res.status(500).json({ success: false, error: '조회 중 서버 오류가 발생했습니다.' });
+
+      return res.status(500).json({
+        success: false,
+        error: '조회 중 서버 오류가 발생했습니다.'
+      });
     }
   }
 
-  return res.status(400).json({ success: false, error: 'Invalid Action' });
+  return res.status(400).json({
+    success: false,
+    error: 'Invalid Action'
+  });
 }
