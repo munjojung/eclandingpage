@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { getDb } from './_lib/db.js';
 import { verifyAdminSession, requireSameOrigin } from './_lib/admin-session.js';
 
 export default async function handler(req, res) {
@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     if (!authenticated) {
       return res.status(401).json({ success: false, error: '로그인이 필요하거나 세션이 만료되었습니다.' });
     }
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = getDb();
 
     // --- 5. 기존 관리자 API 비즈니스 로직 (GET, PUT, DELETE, POST) ---
     if (req.method === 'GET') {

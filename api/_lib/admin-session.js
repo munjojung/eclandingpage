@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { neon } from '@neondatabase/serverless';
+import { getDb } from './db.js';
 
 export const COOKIE_NAME = 'esl_admin_session';
 const SESSION_HOURS = 12;
@@ -40,8 +40,7 @@ function hashToken(token) {
 }
 
 function getSql() {
-  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not configured');
-  return neon(process.env.DATABASE_URL);
+  return getDb();
 }
 
 export async function createAdminSession() {

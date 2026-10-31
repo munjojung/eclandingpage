@@ -1,5 +1,5 @@
 // api/save-worksheet.js
-import { neon } from '@neondatabase/serverless';
+import { getDb } from './_lib/db.js';
 
 export default async function handler(req, res) {
   // 📌 POST 요청만 허용
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     }
 
     // 📌 Neon DB 연결
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = getDb();
 
     // 📌 DB에 데이터 저장
     await sql`

@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { getDb } from './_lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,11 +15,8 @@ export default async function handler(req, res) {
   const normalizedPhone = cleanPhone.replace(/[^0-9]/g, '');
 
   try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL is not configured');
-    }
 
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = getDb();
 
     // 1. 팀 대표 전화번호 및 팀원 명단에서 조회 (최근 날짜 우선)
     const groups = await sql`

@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { getDb } from './_lib/db.js';
 
 const TIME_ZONE = 'Asia/Seoul';
 const REGISTRATION_DEADLINE_HOUR = 17;
@@ -152,20 +152,8 @@ export default async function handler(req, res) {
     });
   }
 
-  // 데이터베이스 연결 설정을 확인합니다.
-  if (!process.env.DATABASE_URL) {
-    console.error(
-      'Schedule Register Error: DATABASE_URL is not configured.'
-    );
-
-    return res.status(500).json({
-      success: false,
-      error: '서버 데이터베이스 설정을 확인해 주세요.',
-    });
-  }
-
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = getDb();
 
     // 밋업 일정 테이블이 없으면 생성합니다.
     await sql`

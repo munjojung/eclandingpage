@@ -1,5 +1,5 @@
 // api/get-worksheets.js
-import { neon } from '@neondatabase/serverless';
+import { getDb } from './_lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = getDb();
     
     // 📌 worksheets 테이블에서 file_name 컬럼을 포함하여 최근 30개 조회
     const worksheets = await sql`

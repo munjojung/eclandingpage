@@ -1,6 +1,6 @@
 
 // api/worksheet.js
-import { neon } from '@neondatabase/serverless';
+import { getDb } from './_lib/db.js';
 import { verifyAdminSession, requireSameOrigin } from './_lib/admin-session.js';
 
 export default async function handler(req, res) {
@@ -210,18 +210,7 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
     try {
       const { id, file_name } = body;
 
-      const connectionString =
-        process.env.POSTGRES_URL_NON_POOLING ||
-        process.env.DATABASE_URL;
-
-      if (!connectionString) {
-        return res.status(500).json({
-          success: false,
-          error: 'DB 연결 문자열이 설정되지 않았습니다.'
-        });
-      }
-
-      const sql = neon(connectionString);
+      const sql = getDb();
 
       if (!id && !file_name) {
         return res.status(400).json({
@@ -287,11 +276,7 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
     try {
       const { phone } = body;
 
-      const connectionString =
-        process.env.POSTGRES_URL_NON_POOLING ||
-        process.env.DATABASE_URL;
-
-      if (!connectionString || !phone) {
+      if (!phone) {
         return res.status(400).json({
           success: false,
           error: '전화번호 또는 DB 설정이 누락되었습니다.'
@@ -307,7 +292,7 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
         });
       }
 
-      const sql = neon(connectionString);
+      const sql = getDb();
 
       // 대표 전화번호 또는 팀원 목록의 괄호 안 전화번호를 정확히 비교
       const rows = await sql`
