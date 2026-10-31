@@ -1,11 +1,7 @@
 
-
 // api/worksheet.js
 import { neon } from '@neondatabase/serverless';
-import {
-  verifyAdminSession,
-  requireSameOrigin
-} from './_lib/admin-session.js';
+import { verifyAdminSession, requireSameOrigin } from './_lib/admin-session.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'DELETE') {
@@ -16,16 +12,10 @@ export default async function handler(req, res) {
     });
   }
 
-  const body =
-    req.body && typeof req.body === 'object'
-      ? req.body
-      : {};
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const action = body.action || (req.method === 'DELETE' ? 'delete' : 'generate');
 
-  const action =
-    body.action ||
-    (req.method === 'DELETE' ? 'delete' : 'generate');
-
-  // 관리자 전용: 학습지 생성 및 삭제
+  // Worksheet generation and deletion are administrator-only operations.
   if (action === 'generate' || action === 'delete') {
     const originError = requireSameOrigin(req);
 
@@ -55,9 +45,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // =====================================================
   // 1. 학습지 생성 (Generate)
-  // =====================================================
   if (action === 'generate') {
     try {
       const {
@@ -217,9 +205,7 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
     }
   }
 
-  // =====================================================
   // 2. DB 삭제 (Delete)
-  // =====================================================
   if (action === 'delete') {
     try {
       const { id, file_name } = body;
@@ -296,9 +282,7 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
     }
   }
 
-  // =====================================================
-  // 3. 팀 조회 (Check)
-  // =====================================================
+  // 3. 휴대폰 번호 조회 (Check)
   if (action === 'check') {
     try {
       const { phone } = body;
@@ -307,80 +291,38 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
         process.env.POSTGRES_URL_NON_POOLING ||
         process.env.DATABASE_URL;
 
-      if (!connectionString) {
-        return res.status(500).json({
+      if (!connectionString || !phone) {
+        return res.status(400).json({
           success: false,
-          error: 'DB 연결 문자열이 설정되지 않았습니다.'
+          error: '전화번호 또는 DB 설정이 누락되었습니다.'
         });
       }
 
-      const cleanPhone =
-        String(phone ?? '').replace(/[^0-9]/g, '');
+      const cleanPhone = String(phone).replace(/[^0-9]/g, '');
 
-      if (!/^[0-9]{8,15}$/.test(cleanPhone)) {
+      if (!cleanPhone) {
         return res.status(400).json({
           success: false,
-          error: '올바른 전화번호를 입력해 주세요.'
+          error: '올바른 휴대폰 번호를 입력해 주세요.'
         });
       }
 
       const sql = neon(connectionString);
 
-      // 기존 applicants 테이블은 더 이상 사용하지 않음.
-      //
-      // 1) esl_meetup_groups.phone 검색
-      // 2) members의 괄호 안 전화번호 검색
-      //
-      // 예:
-      // 서현 (010-5730-8955), 주원 (010-4181-3197)
-      //
-      // members를 쉼표로 분리하고,
-      // 괄호 안의 전화번호를 추출한 뒤 숫자만 비교.
-      //
-      // PostgreSQL 정규표현식 오류(2201B)를 방지하기 위해
-      // REGEXP_MATCHES 대신 SPLIT_PART를 사용.
-
+      // 대표 전화번호 또는 팀원 목록의 괄호 안 전화번호를 정확히 비교
       const rows = await sql`
-        SELECT
-          g.id,
-          g.date,
-          g.group_no,
-          g.facilitator,
-          g.members
+        SELECT id, date, group_no, facilitator, members
         FROM public.esl_meetup_groups AS g
-        WHERE
-          REGEXP_REPLACE(
-            COALESCE(g.phone, ''),
-            '[^0-9]',
-            '',
-            'g'
-          ) = ${cleanPhone}
-
-          OR EXISTS (
-            SELECT 1
-            FROM UNNEST(
-              STRING_TO_ARRAY(
-                COALESCE(g.members, ''),
-                ','
-              )
-            ) AS member_entry(entry)
-            WHERE
-              REGEXP_REPLACE(
-                SPLIT_PART(
-                  SPLIT_PART(
-                    member_entry.entry,
-                    '(',
-                    2
-                  ),
-                  ')',
-                  1
-                ),
-                '[^0-9]',
-                '',
-                'g'
-              ) = ${cleanPhone}
-          )
-        ORDER BY g.date DESC, g.id DESC
+        WHERE REGEXP_REPLACE(COALESCE(g.phone, ''), '[^0-9]', '', 'g') = ${cleanPhone}
+           OR EXISTS (
+             SELECT 1
+             FROM UNNEST(STRING_TO_ARRAY(COALESCE(g.members, ''), ',')) AS m(entry)
+             WHERE REGEXP_REPLACE(
+               SPLIT_PART(SPLIT_PART(m.entry, '(', 2), ')', 1),
+               '[^0-9]', '', 'g'
+             ) = ${cleanPhone}
+           )
+        ORDER BY date DESC, id DESC
         LIMIT 1
       `;
 
@@ -393,13 +335,25 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
 
       const team = rows[0];
 
+      // 개인정보 보호: 전화번호는 서버에서 제거한 후 전송.
+      // 쉼표로 구분된 '이름 (전화번호)' 형식 기준.
+      const safeMembers = String(team.members || '')
+        .split(',')
+        .map(item => item
+          .replace(/\([^)]*\)/g, '')
+          .replace(/(?:\+?\d[\d\s-]{6,}\d)/g, '')
+          .trim())
+        .filter(Boolean)
+        .join(', ');
+
+      res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json({
         success: true,
         data: {
           group_no: team.group_no,
           date: team.date,
           facilitator: team.facilitator || '',
-          members: team.members || ''
+          members: safeMembers
         }
       });
 
