@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Vercel 환경 변수에 등록된 DATABASE_URL 사용
+    // 공통 getDb()를 통해 배포 환경별 데이터베이스에 연결
     const sql = getDb();
 
     // 프론트엔드에서 보낸 데이터 추출
