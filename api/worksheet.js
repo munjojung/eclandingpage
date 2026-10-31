@@ -309,11 +309,19 @@ Output ONLY raw JSON matching this exact structure without markdown ticks:
 
       const sql = neon(connectionString);
 
-      // 입력 번호와 DB 번호 모두 숫자 이외의 문자를 제거한 후 비교
+      // 팀의 대표 전화번호 또는 members에 기록된 팀원 전화번호 검색.
+      // 최근 모임 우선. 전화번호는 구분자를 제거한 후 비교한다.
       const rows = await sql`
-        SELECT *
-        FROM applicants
-        WHERE REGEXP_REPLACE(phone, '[^0-9]', '', 'g') = ${cleanPhone}
+        SELECT id, date, group_no, facilitator, members
+        FROM esl_meetup_groups
+        WHERE REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g') = ${cleanPhone}
+           OR EXISTS (
+             SELECT 1
+             FROM REGEXP_MATCHES(COALESCE(members, ''),
+               '(\+?[0-9][0-9 ()-]{7,}[0-9])', 'g') AS matched
+             WHERE REGEXP_REPLACE(matched[1], '[^0-9]', '', 'g') = ${cleanPhone}
+           )
+        ORDER BY date DESC, id DESC
         LIMIT 1
       `;
 

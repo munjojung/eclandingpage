@@ -21,15 +21,21 @@ export default async function handler(req, res) {
 
     const sql = neon(process.env.DATABASE_URL);
 
-    // 1. 밋업 그룹(esl_meetup_groups) 팀원 명단에서 전화번호 검색
-    const groups = await sql`SELECT * FROM esl_meetup_groups ORDER BY id DESC;`;
-    let matchedGroup = null;
-    for (const group of groups) {
-      if (group.members && group.members.includes(cleanPhone)) {
-        matchedGroup = group;
-        break;
-      }
-    }
+    // 1. 팀 대표 전화번호 및 팀원 명단에서 조회 (최근 날짜 우선)
+    const groups = await sql`
+      SELECT id, date, group_no, facilitator, members
+      FROM esl_meetup_groups
+      WHERE REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', '', 'g') = ${normalizedPhone}
+         OR EXISTS (
+           SELECT 1
+           FROM REGEXP_MATCHES(COALESCE(members, ''),
+             '(\+?[0-9][0-9 ()-]{7,}[0-9])', 'g') AS matched
+           WHERE REGEXP_REPLACE(matched[1], '[^0-9]', '', 'g') = ${normalizedPhone}
+         )
+      ORDER BY date DESC, id DESC
+      LIMIT 1
+    `;
+    const matchedGroup = groups[0] || null;
 
     if (matchedGroup) {
       return res.status(200).json({
