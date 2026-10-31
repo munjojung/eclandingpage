@@ -327,7 +327,7 @@
         const dateText = typeof data.date === 'string'
             ? data.date.trim()
             : '';
-        resDate.textContent = /^\\d{4}-\\d{2}-\\d{2}/.test(dateText)
+        resDate.textContent = /^\d{4}-\d{2}-\d{2}/.test(dateText)
             ? dateText.slice(0, 10)
             : (dateText || '일정 정보 없음');
 
