@@ -626,28 +626,96 @@
       });
     }
 
-    // 📌 통합 API 경로(/api/worksheet) 및 action: 'delete' 적용
+    // 관리자 인증이 필요한 통합 API 삭제 함수
+    // 서버가 삭제 성공을 확인한 경우에만 브라우저의 목록을 갱신합니다.
     async function deleteHistoryItem(id, fileName) {
-      if (!confirm('정말 삭제하시겠습니까? Vercel DB에서도 함께 삭제됩니다.')) return;
-
-      try {
-        await fetch('/api/worksheet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'delete',
-            id: id,
-            file_name: fileName
-          })
-        });
-      } catch (err) {
-        console.warn('DB 삭제 요청 처리 중 오류가 발생했습니다.', err);
+      if (!confirm('정말 삭제하시겠습니까? Vercel DB에서도 함께 삭제됩니다.')) {
+        return;
       }
 
-      historyStore = historyStore.filter(i => i.id !== id);
-      localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
-      renderHistoryList();
-      showToast('성공적으로 삭제되었습니다.', 'info');
+      // API는 id 또는 file_name 중 하나만 받습니다.
+      const idText = id === null || id === undefined ? '' : String(id).trim();
+      const numericId = Number(idText);
+      const hasNumericId =
+        idText !== '' &&
+        /^\d+$/.test(idText) &&
+        Number.isSafeInteger(numericId) &&
+        numericId > 0;
+
+      const normalizedFileName =
+        typeof fileName === 'string' ? fileName.trim() : '';
+
+      let payload;
+      if (hasNumericId) {
+        payload = { action: 'delete', id: numericId };
+      } else if (normalizedFileName) {
+        payload = { action: 'delete', file_name: normalizedFileName };
+      } else {
+        showToast('삭제할 학습지 ID 또는 파일명이 없습니다.', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/worksheet', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        let result;
+        try {
+          result = await response.json();
+        } catch (_) {
+          result = null;
+        }
+
+        // 실패한 요청에서는 로컬 목록을 절대 변경하지 않습니다.
+        if (!response.ok || !result || result.success !== true) {
+          if (response.status === 401) {
+            showToast('관리자 로그인이 필요하거나 세션이 만료되었습니다.', 'error');
+          } else if (response.status === 403) {
+            showToast('허용되지 않은 요청 출처입니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.', 'error');
+          } else {
+            showToast(
+              (result && result.error) || `학습지 삭제에 실패했습니다. (HTTP ${response.status})`,
+              'error'
+            );
+          }
+          return;
+        }
+
+        // 서버 삭제 성공 이후에만 해당 항목을 로컬 목록에서 제거합니다.
+        historyStore = historyStore.filter(item => {
+          if (hasNumericId) {
+            return String(item.id) !== idText;
+          }
+          return String(item.file_name || '').trim() !== normalizedFileName;
+        });
+
+        localStorage.setItem('ec_worksheet_history', JSON.stringify(historyStore));
+
+        // 현재 표시 중인 학습지가 삭제 대상이면 남아 있는 첫 항목 또는 샘플을 표시합니다.
+        const currentMatches = currentData && (
+          hasNumericId
+            ? String(currentData.id) === idText
+            : String(currentData.file_name || '').trim() === normalizedFileName
+        );
+
+        if (currentMatches) {
+          if (historyStore.length > 0) {
+            renderWorksheet(historyStore[0]);
+          } else if (typeof SAMPLE_DATA !== 'undefined') {
+            renderWorksheet(SAMPLE_DATA);
+          }
+        }
+
+        renderHistoryList();
+        showToast(result.message || '학습지가 삭제되었습니다.', 'success');
+      } catch (err) {
+        console.error('DB 삭제 요청 처리 중 오류가 발생했습니다.', err);
+        showToast('서버와 통신할 수 없습니다. 목록은 변경하지 않았습니다.', 'error');
+      }
     }
 
     function selectHistoryItem(id) {
