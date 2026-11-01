@@ -1,5 +1,4 @@
 
-
 import { getDb } from './_lib/db.js';
 import {
   verifyAdminSession,
@@ -27,6 +26,15 @@ const choices = {
     'waitlisted'
   ]
 };
+
+
+// Explicit transition policy. Re-approval from rejected requires a documented reason.
+const applicationTransitions = Object.freeze({
+  applied: ['approved', 'rejected', 'waitlisted'],
+  approved: ['waitlisted', 'rejected'],
+  waitlisted: ['approved', 'rejected'],
+  rejected: ['approved']
+});
 
 export default async function handler(req, res) {
   if (!['GET', 'PATCH'].includes(req.method)) {
@@ -129,6 +137,24 @@ export default async function handler(req, res) {
           ORDER BY h.changed_at DESC, h.history_id DESC
         `;
 
+      } else if (type === 'audit_logs') {
+        const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+        const action = String(req.query.action || '').trim();
+        const actor = String(req.query.actor_user_id || '').trim();
+        if (action.length > 100 || (actor && !/^\d{1,15}$/.test(actor))) {
+          return res.status(400).json({ error: '잘못된 감사 로그 검색 조건입니다.' });
+        }
+        const actorId = actor ? Number(actor) : null;
+        data = await sql`
+          SELECT audit_id, actor_user_id, target_user_id,
+                 action, outcome, metadata, created_at
+          FROM esl_v2.audit_logs
+          WHERE (${action}::text = '' OR action = ${action}::text)
+            AND (${actorId}::bigint IS NULL OR actor_user_id = ${actorId}::bigint)
+          ORDER BY created_at DESC, audit_id DESC
+          LIMIT ${limit}::int
+        `;
+
       } else if (type === 'application_history') {
         const applicationId = Number(req.query.application_id);
         if (!Number.isSafeInteger(applicationId) || applicationId <= 0) {
@@ -185,10 +211,10 @@ export default async function handler(req, res) {
           FROM esl_v2.meetup_assignments a
           JOIN esl_v2.meetup_groups g
             ON g.group_id = a.group_id
-          JOIN esl_v2.meetup_applications ap
-            ON ap.application_id = a.application_id
           JOIN esl_v2.meetups m
             ON m.meetup_id = a.meetup_id
+          JOIN esl_v2.meetup_applications ap
+            ON ap.application_id = a.application_id
           JOIN esl_v2.users u
             ON u.user_id = ap.user_id
           ORDER BY m.meetup_date DESC, g.group_no
@@ -447,6 +473,23 @@ export default async function handler(req, res) {
         });
       }
 
+      const existing = await sql`
+        SELECT status FROM esl_v2.meetup_applications
+        WHERE application_id = ${numericId}::bigint
+      `;
+      if (!existing.length) {
+        return res.status(404).json({ error: '신청을 찾을 수 없습니다.' });
+      }
+      const previousStatus = existing[0].status;
+      if (!applicationTransitions[previousStatus]?.includes(status)) {
+        return res.status(409).json({
+          error: `허용되지 않는 상태 변경입니다: ${previousStatus} → ${status}`
+        });
+      }
+      if (previousStatus === 'rejected' && status === 'approved' && reason.length < 10) {
+        return res.status(400).json({ error: '거절 후 재승인에는 10자 이상의 구체적인 사유가 필요합니다.' });
+      }
+
       const actor = await sql`
         SELECT user_id FROM esl_v2.users
         WHERE user_id = ${actorId}::bigint
@@ -476,6 +519,7 @@ export default async function handler(req, res) {
           FROM previous AS p
           WHERE a.application_id = p.application_id
             AND a.status = p.status
+            AND p.status = ${previousStatus}::text
             AND p.status <> ${status}::text
           RETURNING a.application_id, a.user_id,
                     p.status AS old_status, a.status AS new_status
@@ -515,7 +559,7 @@ export default async function handler(req, res) {
 
       if (!updated.length) {
         return res.status(409).json({
-          error: '대상 신청이 없거나 이미 동일한 상태입니다. 새로고침 후 확인하세요.'
+          error: '상태가 다른 관리자에 의해 변경되었거나 동일 상태입니다. 새로고침 후 다시 확인하세요.'
         });
       }
       if (updated[0].history_count !== 1 || updated[0].audit_count !== 1) {

@@ -87,7 +87,10 @@
         <button class="tab-btn" id="tabV2" onclick="openV2()">🧪 V2 관리 (dev)</button>
     </div>
 
-    <div id="viewV2" class="section-view"><h2>V2 관리 (dev)</h2><p>테스트 데이터 조회, CSV 다운로드 및 상태 변경</p><div class="filter-box"><select id="v2Type" onchange="loadV2()"><option value="meetups">밋업 일정</option><option value="groups">밋업 그룹</option><option value="members">회원</option><option value="applications">참가 신청</option><option value="assignments">팀 배정</option><option value="attendance">출석</option></select><button class="btn btn-refresh" onclick="loadV2()">새로고침</button><button class="btn btn-download" onclick="downloadV2CSV()">CSV 다운로드</button></div><p id="v2Message" role="status"></p><div class="table-wrapper"><table><thead id="v2Head"></thead><tbody id="v2Body"></tbody></table></div><section id="v2HistoryPanel" hidden aria-label="상태 변경 이력"><div class="v2-history-header"><h3 id="v2HistoryTitle">회원 상태 변경 이력</h3><button type="button" class="btn btn-logout" onclick="closeV2History()">닫기</button></div><p id="v2HistoryMessage" role="status"></p><div class="table-wrapper"><table><thead><tr><th>변경 일시 (한국)</th><th>이전 상태</th><th>새 상태</th><th>변경 사유</th><th>관리자</th></tr></thead><tbody id="v2HistoryBody"></tbody></table></div></section></div>
+    <div id="viewV2" class="section-view"><h2>V2 관리 (dev)</h2><p>테스트 데이터 조회, CSV 다운로드 및 상태 변경</p><div class="filter-box"><select id="v2Type" onchange="loadV2()"><option value="meetups">밋업 일정</option><option value="groups">밋업 그룹</option><option value="members">회원</option><option value="applications">참가 신청</option><option value="assignments">팀 배정</option><option value="attendance">출석</option><option value="audit_logs">감사 로그</option></select><span id="v2Filters" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+<select id="v2StatusFilter" onchange="renderV2Rows()" aria-label="신청 상태"><option value="">전체 상태</option><option value="applied">applied</option><option value="approved">approved</option><option value="waitlisted">waitlisted</option><option value="rejected">rejected</option></select>
+<input id="v2Search" placeholder="신청자 또는 모임 코드 검색" oninput="renderV2Rows()" aria-label="검색어" style="padding:7px;max-width:230px">
+</span><span id="v2AuditFilters" style="display:none;align-items:center;gap:6px;flex-wrap:wrap"><select id="v2AuditAction" onchange="loadV2()"><option value="">모든 작업</option><option value="application.status_changed">신청 상태 변경</option><option value="member.status_changed">회원 상태 변경</option></select><input id="v2AuditActor" placeholder="관리자 ID" inputmode="numeric" style="padding:7px;width:95px"><button type="button" class="btn btn-refresh" onclick="loadV2()">감사 검색</button></span><button class="btn btn-refresh" onclick="loadV2()">새로고침</button><button class="btn btn-download" onclick="downloadV2CSV()">CSV 다운로드</button></div><p id="v2Message" role="status"></p><div class="table-wrapper"><table><thead id="v2Head"></thead><tbody id="v2Body"></tbody></table></div><section id="v2HistoryPanel" hidden aria-label="상태 변경 이력"><div class="v2-history-header"><h3 id="v2HistoryTitle">회원 상태 변경 이력</h3><button type="button" class="btn btn-logout" onclick="closeV2History()">닫기</button></div><p id="v2HistoryMessage" role="status"></p><div class="table-wrapper"><table><thead><tr><th>변경 일시 (한국)</th><th>이전 상태</th><th>새 상태</th><th>변경 사유</th><th>관리자</th></tr></thead><tbody id="v2HistoryBody"></tbody></table></div></section></div>
     <!-- 1. 문의 관리 섹션 -->
     <div id="viewInquiries" class="section-view active">
         <div class="filter-box">
@@ -710,7 +713,7 @@
 </script>
 <script>
 let v2Rows=[];
-const v2Fields={meetups:['meetup_id','meetup_code','title','meetup_date','location','status'],groups:['group_id','meetup_code','group_no','facilitator','participants'],members:['member_id','real_name','nickname','english_level','status'],applications:['application_id','meetup_code','real_name','status'],assignments:['assignment_id','meetup_code','group_no','real_name','role'],attendance:['assignment_id','meetup_code','real_name','status']};
+const v2Fields={meetups:['meetup_id','meetup_code','title','meetup_date','location','status'],groups:['group_id','meetup_code','group_no','facilitator','participants'],members:['member_id','real_name','nickname','english_level','status'],applications:['application_id','meetup_code','real_name','status'],assignments:['assignment_id','meetup_code','group_no','real_name','role'],attendance:['assignment_id','meetup_code','real_name','status'],audit_logs:['audit_id','created_at','actor_user_id','target_user_id','action','outcome','metadata']};
 function closeV2History(){document.getElementById('v2HistoryPanel').hidden=true;document.getElementById('v2HistoryBody').replaceChildren();}
 async function showV2History(memberId,nickname){
  const panel=document.getElementById('v2HistoryPanel'),body=document.getElementById('v2HistoryBody'),msg=document.getElementById('v2HistoryMessage');
@@ -748,7 +751,62 @@ async function showV2ApplicationHistory(applicationId, name) {
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function openV2(){document.querySelectorAll('.section-view').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));document.getElementById('viewV2').classList.add('active');document.getElementById('tabV2').classList.add('active');loadV2();}
-async function loadV2(){closeV2History();const type=document.getElementById('v2Type').value,msg=document.getElementById('v2Message');msg.textContent='조회 중...';try{const r=await fetch('/api/admin-mgt-v2?type='+type,{credentials:'same-origin'}),j=await r.json();if(!r.ok||!j.success)throw Error(j.error||'조회 실패');v2Rows=j.data;const fields=v2Fields[type],head=document.getElementById('v2Head'),body=document.getElementById('v2Body');head.replaceChildren();body.replaceChildren();const tr=document.createElement('tr');for(const f of [...fields,'관리']){const th=document.createElement('th');th.textContent=f;tr.append(th);}head.append(tr);for(const row of v2Rows){const tr=document.createElement('tr');for(const f of fields){const td=document.createElement('td');td.textContent=row[f]??'';tr.append(td);}const td=document.createElement('td');if(['meetups','members','applications'].includes(type)){const select=document.createElement('select'),options=type==='meetups'?['draft','scheduled','closed','cancelled','completed']:type==='members'?['pending','active','suspended','withdrawn']:['applied','approved','rejected','waitlisted'];for(const status of options){const opt=document.createElement('option');opt.value=status;opt.textContent=status;opt.selected=status===row.status;select.append(opt);}const btn=document.createElement('button');btn.className='btn btn-edit';btn.textContent='상태 저장';btn.addEventListener('click',()=>saveV2(type,row[fields[0]],select.value));td.append(select,btn);if(type==='members'||type==='applications'){const historyBtn=document.createElement('button');historyBtn.type='button';historyBtn.className='btn v2-history-btn';historyBtn.textContent='이력 보기';historyBtn.addEventListener('click',()=>type==='members'?showV2History(row.member_id,row.nickname):showV2ApplicationHistory(row.application_id,row.real_name));td.append(historyBtn);}}tr.append(td);body.append(tr);}msg.textContent=type+' '+v2Rows.length+'건';}catch(e){msg.textContent='오류: '+e.message;}}
+async function loadV2(){
+ closeV2History();
+ const type=document.getElementById('v2Type').value;
+ document.getElementById('v2Filters').style.display=type==='applications'?'inline-flex':'none';
+ document.getElementById('v2AuditFilters').style.display=type==='audit_logs'?'inline-flex':'none';
+ const msg=document.getElementById('v2Message');msg.textContent='조회 중...';
+ try{
+  const params=new URLSearchParams({type});
+  if(type==='audit_logs'){
+   params.set('action',document.getElementById('v2AuditAction').value);
+   params.set('actor_user_id',document.getElementById('v2AuditActor').value.trim());
+   params.set('limit','100');
+  }
+  const r=await fetch('/api/admin-mgt-v2?'+params,{credentials:'same-origin'});
+  const j=await r.json();if(!r.ok||!j.success)throw Error(j.error||'조회 실패');
+  v2Rows=j.data;renderV2Rows();
+ }catch(e){msg.textContent='오류: '+e.message;}
+}
+function renderV2Rows(){
+ const type=document.getElementById('v2Type').value;
+ const fields=v2Fields[type],head=document.getElementById('v2Head'),body=document.getElementById('v2Body');
+ head.replaceChildren();body.replaceChildren();
+ if(!fields)return;
+ const tr=document.createElement('tr');
+ for(const f of [...fields,...(['meetups','members','applications'].includes(type)?['관리']:[])]){
+  const th=document.createElement('th');th.textContent=f;tr.append(th);
+ }
+ head.append(tr);
+ const statusFilter=document.getElementById('v2StatusFilter').value;
+ const q=document.getElementById('v2Search').value.trim().toLocaleLowerCase();
+ const rows=type==='applications'?v2Rows.filter(row=>(!statusFilter||row.status===statusFilter)&&(!q||String(row.real_name||'').toLocaleLowerCase().includes(q)||String(row.meetup_code||'').toLocaleLowerCase().includes(q))):v2Rows;
+ for(const row of rows){
+  const tr=document.createElement('tr');
+  for(const f of fields){
+   const td=document.createElement('td');
+   const value=row[f];
+   td.textContent=type==='audit_logs'&&f==='created_at'&&value?new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):typeof value==='object'?JSON.stringify(value):value??'';
+   tr.append(td);
+  }
+  if(['meetups','members','applications'].includes(type)){
+   const td=document.createElement('td'),select=document.createElement('select');
+   const options=type==='meetups'?['draft','scheduled','closed','cancelled','completed']:type==='members'?['pending','active','suspended','withdrawn']:['applied','approved','rejected','waitlisted'];
+   for(const status of options){const opt=document.createElement('option');opt.value=status;opt.textContent=status;opt.selected=status===row.status;select.append(opt);}
+   const btn=document.createElement('button');btn.className='btn btn-edit';btn.textContent='상태 저장';
+   btn.addEventListener('click',()=>saveV2(type,row[fields[0]],select.value));td.append(select,btn);
+   if(type==='members'||type==='applications'){
+    const hb=document.createElement('button');hb.type='button';hb.className='btn v2-history-btn';hb.textContent='이력 보기';
+    hb.addEventListener('click',()=>type==='members'?showV2History(row.member_id,row.nickname):showV2ApplicationHistory(row.application_id,row.real_name));td.append(hb);
+   }
+   tr.append(td);
+  }
+  body.append(tr);
+ }
+ document.getElementById('v2Message').textContent=`${type} ${rows.length}건${rows.length!==v2Rows.length?` (전체 ${v2Rows.length}건)`:''}`;
+}
+
 async function saveV2(type,id,status){let reason;if(type==='members'||type==='applications'){reason=prompt(type==='members'?'회원 상태 변경 사유를 입력하세요 (필수, 500자 이하).':'참가 신청 상태 변경 사유를 입력하세요 (필수, 500자 이하).');if(reason===null)return;reason=reason.trim();if(!reason||reason.length>500){alert('사유를 1~500자로 입력하세요.');return;}}if(!confirm(type+' #'+id+' 상태를 '+status+'(으)로 변경할까요?'))return;try{const r=await fetch('/api/admin-mgt-v2',{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({type,id,status,reason})}),j=await r.json();if(!r.ok||!j.success)throw Error(j.error||'저장 실패');await loadV2();}catch(e){alert(e.message);}}
 function downloadV2CSV(){const type=document.getElementById('v2Type').value,fields=v2Fields[type],cell=v=>'"'+String(v??'').replaceAll('"','""')+'"',csv='\uFEFF'+[fields.join(','),...v2Rows.map(row=>fields.map(f=>cell(row[f])).join(','))].join('\r\n'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='esl_v2_'+type+'.csv';a.click();URL.revokeObjectURL(url);}
 </script>
