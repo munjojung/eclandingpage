@@ -106,16 +106,10 @@ export default async function handler(req, res) {
           ORDER BY m.meetup_date DESC, g.group_no
         `;
 
-      // =========================================
-      // GET: Member status change history
-      // =========================================
       } else if (type === 'member_history') {
         const memberId = Number(req.query.member_id);
 
-        if (
-          !Number.isSafeInteger(memberId) ||
-          memberId <= 0
-        ) {
+        if (!Number.isSafeInteger(memberId) || memberId <= 0) {
           return res.status(400).json({
             error: '올바른 회원 ID가 필요합니다.'
           });
@@ -132,14 +126,25 @@ export default async function handler(req, res) {
             h.changed_at
           FROM esl_v2.member_status_history h
           WHERE h.member_id = ${memberId}::bigint
-          ORDER BY
-            h.changed_at DESC,
-            h.history_id DESC
+          ORDER BY h.changed_at DESC, h.history_id DESC
         `;
 
-      // =========================================
-      // GET: Members
-      // =========================================
+      } else if (type === 'application_history') {
+        const applicationId = Number(req.query.application_id);
+        if (!Number.isSafeInteger(applicationId) || applicationId <= 0) {
+          return res.status(400).json({ error: '올바른 신청 ID가 필요합니다.' });
+        }
+        data = await sql`
+          SELECT h.history_id, h.application_id, h.old_status,
+                 h.new_status, h.reason, h.changed_by_user_id,
+                 h.changed_at, u.real_name AS changed_by_name
+          FROM esl_v2.meetup_application_status_history h
+          LEFT JOIN esl_v2.users u ON u.user_id = h.changed_by_user_id
+          WHERE h.application_id = ${applicationId}::bigint
+          ORDER BY h.changed_at DESC, h.history_id DESC
+          LIMIT 100
+        `;
+
       } else if (type === 'members') {
         data = await sql`
           SELECT
@@ -180,10 +185,10 @@ export default async function handler(req, res) {
           FROM esl_v2.meetup_assignments a
           JOIN esl_v2.meetup_groups g
             ON g.group_id = a.group_id
-          JOIN esl_v2.meetups m
-            ON m.meetup_id = a.meetup_id
           JOIN esl_v2.meetup_applications ap
             ON ap.application_id = a.application_id
+          JOIN esl_v2.meetups m
+            ON m.meetup_id = a.meetup_id
           JOIN esl_v2.users u
             ON u.user_id = ap.user_id
           ORDER BY m.meetup_date DESC, g.group_no
@@ -427,14 +432,95 @@ export default async function handler(req, res) {
     // PATCH: Application status
     // =========================================
     } else if (type === 'applications') {
-      updated = await sql`
-        UPDATE esl_v2.meetup_applications
-        SET
-          status = ${status}::text,
-          updated_at = now()
-        WHERE application_id = ${numericId}::bigint
-        RETURNING application_id
+      const actorId = Number(process.env.V2_ADMIN_USER_ID);
+      if (!Number.isSafeInteger(actorId) || actorId <= 0) {
+        return res.status(503).json({
+          error: 'V2_ADMIN_USER_ID 설정이 필요합니다. 신청 상태 변경을 중단했습니다.'
+        });
+      }
+
+      const reason = typeof req.body?.reason === 'string'
+        ? req.body.reason.trim() : '';
+      if (!reason || reason.length > 500) {
+        return res.status(400).json({
+          error: '신청 상태 변경 사유를 1~500자로 입력하세요.'
+        });
+      }
+
+      const actor = await sql`
+        SELECT user_id FROM esl_v2.users
+        WHERE user_id = ${actorId}::bigint
+          AND account_status = 'active'
+        LIMIT 1
       `;
+      if (!actor.length) {
+        return res.status(403).json({
+          error: '설정된 V2 관리자 사용자를 찾을 수 없습니다.'
+        });
+      }
+
+      // One SQL statement: status update + history + audit.
+      // Unchanged statuses produce no history/audit rows.
+      updated = await sql`
+        WITH previous AS MATERIALIZED (
+          SELECT application_id, user_id, status
+          FROM esl_v2.meetup_applications
+          WHERE application_id = ${numericId}::bigint
+        ),
+        changed AS (
+          UPDATE esl_v2.meetup_applications AS a
+          SET status = ${status}::text,
+              reviewed_by_user_id = ${actorId}::bigint,
+              reviewed_at = now(),
+              updated_at = now()
+          FROM previous AS p
+          WHERE a.application_id = p.application_id
+            AND a.status = p.status
+            AND p.status <> ${status}::text
+          RETURNING a.application_id, a.user_id,
+                    p.status AS old_status, a.status AS new_status
+        ),
+        history AS (
+          INSERT INTO esl_v2.meetup_application_status_history (
+            application_id, changed_by_user_id,
+            old_status, new_status, reason
+          )
+          SELECT application_id, ${actorId}::bigint,
+                 old_status, new_status, ${reason}::text
+          FROM changed
+          RETURNING history_id, application_id
+        ),
+        audit AS (
+          INSERT INTO esl_v2.audit_logs (
+            actor_user_id, target_user_id, action, outcome, metadata
+          )
+          SELECT ${actorId}::bigint, c.user_id,
+                 'application.status_changed', 'success',
+                 jsonb_build_object(
+                   'application_id', c.application_id,
+                   'history_id', h.history_id,
+                   'old_status', c.old_status,
+                   'new_status', c.new_status,
+                   'reason', ${reason}::text
+                 )
+          FROM changed c
+          JOIN history h ON h.application_id = c.application_id
+          RETURNING audit_id
+        )
+        SELECT c.application_id,
+               (SELECT count(*)::int FROM history) AS history_count,
+               (SELECT count(*)::int FROM audit) AS audit_count
+        FROM changed c
+      `;
+
+      if (!updated.length) {
+        return res.status(409).json({
+          error: '대상 신청이 없거나 이미 동일한 상태입니다. 새로고침 후 확인하세요.'
+        });
+      }
+      if (updated[0].history_count !== 1 || updated[0].audit_count !== 1) {
+        throw new Error('Application history/audit insertion failed');
+      }
     }
 
     return res.status(
@@ -451,4 +537,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
