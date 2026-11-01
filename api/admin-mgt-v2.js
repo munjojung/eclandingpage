@@ -1,4 +1,5 @@
 
+
 import { getDb } from './_lib/db.js';
 import {
   verifyAdminSession,
@@ -105,6 +106,40 @@ export default async function handler(req, res) {
           ORDER BY m.meetup_date DESC, g.group_no
         `;
 
+      // =========================================
+      // GET: Member status change history
+      // =========================================
+      } else if (type === 'member_history') {
+        const memberId = Number(req.query.member_id);
+
+        if (
+          !Number.isSafeInteger(memberId) ||
+          memberId <= 0
+        ) {
+          return res.status(400).json({
+            error: '올바른 회원 ID가 필요합니다.'
+          });
+        }
+
+        data = await sql`
+          SELECT
+            h.history_id,
+            h.member_id,
+            h.old_status,
+            h.new_status,
+            h.reason,
+            h.changed_by_user_id,
+            h.changed_at
+          FROM esl_v2.member_status_history h
+          WHERE h.member_id = ${memberId}::bigint
+          ORDER BY
+            h.changed_at DESC,
+            h.history_id DESC
+        `;
+
+      // =========================================
+      // GET: Members
+      // =========================================
       } else if (type === 'members') {
         data = await sql`
           SELECT
@@ -409,10 +444,11 @@ export default async function handler(req, res) {
     });
 
   } catch (e) {
-    console.error('admin-v2', e);
+    console.error('admin-mgt-v2', e);
 
     return res.status(500).json({
       error: '서버 오류'
     });
   }
 }
+
