@@ -1,7 +1,7 @@
 
 import { getDb } from './_lib/db.js';
 import {
-  verifyAdminSession,
+  getAdminIdentity,
   requireSameOrigin
 } from './_lib/admin-session.js';
 
@@ -53,7 +53,8 @@ export default async function handler(req, res) {
 
   try {
     // Existing administrator authentication
-    if (!await verifyAdminSession(req)) {
+    const adminIdentity = await getAdminIdentity(req);
+    if (!adminIdentity || !Number.isSafeInteger(adminIdentity.user_id) || adminIdentity.user_id <= 0) {
       return res.status(401).json({
         error: '관리자 로그인이 필요합니다.'
       });
@@ -131,8 +132,10 @@ export default async function handler(req, res) {
             h.new_status,
             h.reason,
             h.changed_by_user_id,
+            u.real_name AS changed_by_name,
             h.changed_at
           FROM esl_v2.member_status_history h
+          LEFT JOIN esl_v2.users u ON u.user_id = h.changed_by_user_id
           WHERE h.member_id = ${memberId}::bigint
           ORDER BY h.changed_at DESC, h.history_id DESC
         `;
@@ -149,9 +152,9 @@ export default async function handler(req, res) {
           SELECT audit_id, actor_user_id, target_user_id,
                  action, outcome, metadata, created_at
           FROM esl_v2.audit_logs
-          WHERE (${action}::text = '' OR action = ${action}::text)
-            AND (${actorId}::bigint IS NULL OR actor_user_id = ${actorId}::bigint)
-          ORDER BY created_at DESC, audit_id DESC
+          WHERE (${action}::text = '' OR a.action = ${action}::text)
+            AND (${actorId}::bigint IS NULL OR a.actor_user_id = ${actorId}::bigint)
+          ORDER BY a.created_at DESC, a.audit_id DESC
           LIMIT ${limit}::int
         `;
 
@@ -286,22 +289,17 @@ export default async function handler(req, res) {
     // PATCH: Member status with audit history
     // =========================================
     } else if (type === 'members') {
-      const actorId = Number(
-        process.env.V2_ADMIN_USER_ID
-      );
+      const actorId = adminIdentity.user_id;
 
       if (
         !Number.isSafeInteger(actorId) ||
         actorId <= 0
       ) {
         return res.status(503).json({
-          error: 'V2_ADMIN_USER_ID 설정이 필요합니다. 회원 상태 변경을 중단했습니다.'
+          error: '개인별 관리자 세션이 필요합니다.'
         });
       }
 
-      // The legacy password is shared.
-      // This identifies one designated admin account,
-      // not the individual person who logged in.
       const actor = await sql`
         SELECT user_id
         FROM esl_v2.users
@@ -312,7 +310,7 @@ export default async function handler(req, res) {
 
       if (!actor.length) {
         return res.status(403).json({
-          error: '설정된 V2 관리자 사용자를 찾을 수 없습니다.'
+          error: '활성 관리자 계정을 찾을 수 없습니다.'
         });
       }
 
@@ -458,10 +456,10 @@ export default async function handler(req, res) {
     // PATCH: Application status
     // =========================================
     } else if (type === 'applications') {
-      const actorId = Number(process.env.V2_ADMIN_USER_ID);
+      const actorId = adminIdentity.user_id;
       if (!Number.isSafeInteger(actorId) || actorId <= 0) {
         return res.status(503).json({
-          error: 'V2_ADMIN_USER_ID 설정이 필요합니다. 신청 상태 변경을 중단했습니다.'
+          error: '개인별 관리자 세션이 필요합니다.'
         });
       }
 
@@ -498,7 +496,7 @@ export default async function handler(req, res) {
       `;
       if (!actor.length) {
         return res.status(403).json({
-          error: '설정된 V2 관리자 사용자를 찾을 수 없습니다.'
+          error: '활성 관리자 계정을 찾을 수 없습니다.'
         });
       }
 

@@ -77,43 +77,63 @@ function getSql() {
 }
 
 // 관리자 세션 생성
-export async function createAdminSession() {
+export async function createAdminSession(userId = null) {
   const sql = getSql();
 
   const token = crypto.randomBytes(32).toString('base64url');
   const tokenHash = hashToken(token);
 
-  await sql`
-    INSERT INTO esl_admin_sessions_v2 (token_hash, expires_at)
-    VALUES (
-      ${tokenHash},
-      CURRENT_TIMESTAMP + INTERVAL '12 hours'
-    )
-  `;
+  if (process.env.VERCEL_ENV === 'production' && userId === null) {
+    // Preserve the existing production schema until its own migration.
+    await sql`
+      INSERT INTO esl_admin_sessions_v2 (token_hash, expires_at)
+      VALUES (${tokenHash}, CURRENT_TIMESTAMP + INTERVAL '12 hours')
+    `;
+  } else {
+    if (!Number.isSafeInteger(Number(userId)) || Number(userId) <= 0) {
+      throw new Error('Personal admin session requires a valid user ID');
+    }
+    await sql`
+      INSERT INTO esl_admin_sessions_v2 (token_hash, expires_at, user_id)
+      VALUES (${tokenHash}, CURRENT_TIMESTAMP + INTERVAL '12 hours', ${userId}::bigint)
+    `;
+  }
 
   return token;
 }
 
 // 관리자 세션 인증 확인
-export async function verifyAdminSession(req) {
+export async function getAdminIdentity(req) {
   const token = readCookie(req);
 
   if (!token || token.length > 200) {
-    return false;
+    return null;
   }
 
   const sql = getSql();
   const tokenHash = hashToken(token);
 
   const rows = await sql`
-    SELECT token_hash
-    FROM esl_admin_sessions_v2
-    WHERE token_hash = ${tokenHash}
-      AND expires_at > CURRENT_TIMESTAMP
+    SELECT s.user_id, u.real_name
+    FROM esl_admin_sessions_v2 s
+    LEFT JOIN esl_v2.users u ON u.user_id = s.user_id
+    WHERE s.token_hash = ${tokenHash}
+      AND s.expires_at > CURRENT_TIMESTAMP
+      AND (
+        (s.user_id IS NULL AND ${process.env.VERCEL_ENV === 'production'}::boolean)
+        OR (
+          u.account_status = 'active'
+          AND EXISTS (
+            SELECT 1 FROM esl_v2.user_roles r
+            WHERE r.user_id = s.user_id
+              AND r.role = 'admin' AND r.status = 'approved'
+          )
+        )
+      )
     LIMIT 1
   `;
 
-  return rows.length > 0;
+  return rows.length ? { user_id: rows[0].user_id === null ? null : Number(rows[0].user_id), real_name: rows[0].real_name || null } : null;
 }
 
 // 관리자 세션 폐기 (로그아웃)
@@ -131,4 +151,8 @@ export async function revokeAdminSession(req) {
     DELETE FROM esl_admin_sessions_v2
     WHERE token_hash = ${tokenHash}
   `;
+}
+
+export async function verifyAdminSession(req) {
+  return Boolean(await getAdminIdentity(req));
 }

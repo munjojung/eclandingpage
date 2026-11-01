@@ -61,8 +61,9 @@
 <div id="authOverlay">
     <div class="auth-card">
         <h3>🔑 관리자 로그인</h3>
-        <p style="font-size: 12px; color: #666;">관리자 비밀번호를 입력해 주세요.</p>
-        <input type="password" id="adminPasswordInput" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter') authenticate()">
+        <p style="font-size: 12px; color: #666;">개발 환경: 개인별 관리자 계정으로 로그인합니다.</p>
+        <input type="email" id="adminEmailInput" placeholder="관리자 이메일" autocomplete="username">
+        <input type="password" autocomplete="current-password" id="adminPasswordInput" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter') authenticate()">
         <button onclick="authenticate()">접속하기</button>
     </div>
 </div>
@@ -71,6 +72,7 @@
     <h1>
         <span>📋 ESL 통합 관리 시스템</span>
         <div class="header-controls">
+            <span id="currentAdmin" style="font-size:12px;color:#475569"></span>
             <button class="btn btn-download" onclick="downloadCSV()">📥 CSV 다운로드</button>
             <button class="btn btn-upload" onclick="triggerCSVUpload()">📤 CSV 업로드</button>
             <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
@@ -190,15 +192,22 @@
     let rawMeetupsData = [];
     let rawSchedulesData = [];
 
+    function showCurrentAdmin(user) {
+        document.getElementById('currentAdmin').textContent = user?.user_id
+          ? `로그인: ${user.real_name || '관리자'} (#${user.user_id})`
+          : '';
+    }
+
     async function authenticate() {
         const pwd = document.getElementById('adminPasswordInput').value;
+        const email = document.getElementById('adminEmailInput').value.trim();
         if (!pwd) return alert('비밀번호를 입력하세요.');
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ password: pwd })
+                body: JSON.stringify({ email, password: pwd })
             });
             const result = await res.json().catch(() => ({}));
             document.getElementById('adminPasswordInput').value = '';
@@ -206,6 +215,7 @@
                 return alert(result.error || '로그인에 실패했습니다.');
             }
             document.getElementById('authOverlay').style.display = 'none';
+            showCurrentAdmin(result.user);
             loadCurrentView();
         } catch (error) {
             alert('로그인 요청 중 오류가 발생했습니다.');
@@ -225,6 +235,7 @@
         }
         document.getElementById('adminPasswordInput').value = '';
         document.getElementById('authOverlay').style.display = 'flex';
+        showCurrentAdmin(null);
     }
 
     function switchTab(tab) {
@@ -703,6 +714,7 @@
             const result = await res.json().catch(() => ({}));
             if (res.ok && result.authenticated) {
                 document.getElementById('authOverlay').style.display = 'none';
+                showCurrentAdmin(result.user);
                 loadCurrentView();
             }
         } catch (error) {
@@ -713,7 +725,7 @@
 </script>
 <script>
 let v2Rows=[];
-const v2Fields={meetups:['meetup_id','meetup_code','title','meetup_date','location','status'],groups:['group_id','meetup_code','group_no','facilitator','participants'],members:['member_id','real_name','nickname','english_level','status'],applications:['application_id','meetup_code','real_name','status'],assignments:['assignment_id','meetup_code','group_no','real_name','role'],attendance:['assignment_id','meetup_code','real_name','status'],audit_logs:['audit_id','created_at','actor_user_id','target_user_id','action','outcome','metadata']};
+const v2Fields={meetups:['meetup_id','meetup_code','title','meetup_date','location','status'],groups:['group_id','meetup_code','group_no','facilitator','participants'],members:['member_id','real_name','nickname','english_level','status'],applications:['application_id','meetup_code','real_name','status'],assignments:['assignment_id','meetup_code','group_no','real_name','role'],attendance:['assignment_id','meetup_code','real_name','status'],audit_logs:['audit_id','created_at','actor_user_id','actor_name','target_user_id','action','outcome','metadata']};
 function closeV2History(){document.getElementById('v2HistoryPanel').hidden=true;document.getElementById('v2HistoryBody').replaceChildren();}
 async function showV2History(memberId,nickname){
  const panel=document.getElementById('v2HistoryPanel'),body=document.getElementById('v2HistoryBody'),msg=document.getElementById('v2HistoryMessage');
