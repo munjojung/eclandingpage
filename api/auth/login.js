@@ -16,35 +16,39 @@ export default async function handler(req, res) {
   // dev Preview: personal administrator accounts only; no shared-password fallback.
   if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_GIT_COMMIT_REF === 'dev') {
     try {
-      const email = String(req.body?.email || '').trim().toLowerCase();
+      // Korean mobile number: accept 010-1234-5678, 01012345678, +82 10 1234 5678.
+      const rawPhone = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
+      const compact = rawPhone.replace(/[\s().-]/g, '');
+      const phone = compact.startsWith('+82') ? '0' + compact.slice(3) : compact;
+      const validPhone = /^010[0-9]{8}$/.test(phone);
       const password = typeof req.body?.password === 'string' ? req.body.password : '';
-      if (!email || email.length > 254 || !password || password.length > 1024) {
-        return res.status(400).json({ success: false, error: '관리자 이메일과 비밀번호를 입력하세요.' });
+      if (!validPhone || !password || password.length > 1024) {
+        return res.status(400).json({ success: false, error: '올바른 휴대전화번호와 비밀번호를 입력하세요.' });
       }
       const sql = getDb();
       const rows = await sql`
         SELECT c.user_id, c.password_hash, u.real_name
         FROM esl_v2.admin_credentials c
         JOIN esl_v2.users u ON u.user_id = c.user_id
-        WHERE lower(u.email) = ${email}
+        WHERE u.phone_normalized = ${phone}
           AND u.account_status = 'active'
           AND c.enabled = true
           AND EXISTS (
             SELECT 1 FROM esl_v2.user_roles r
             WHERE r.user_id = u.user_id AND r.role = 'admin' AND r.status = 'approved'
           )
-        LIMIT 1
+        LIMIT 2
       `;
       // Equal-cost verification for unknown users (avoid trivial account enumeration).
       const dummy = 'scrypt$16384$8$1$00000000000000000000000000000000$' + '00'.repeat(64);
-      const stored = rows[0]?.password_hash || dummy;
+      const stored = rows.length === 1 ? rows[0].password_hash : dummy;
       const [algorithm, n, r, p, salt, hex] = stored.split('$');
       if (algorithm !== 'scrypt' || n !== '16384' || r !== '8' || p !== '1' || !/^[0-9a-f]{32}$/.test(salt) || !/^[0-9a-f]{128}$/.test(hex)) {
         throw new Error('Invalid password hash format');
       }
       const derived = await scrypt(password, Buffer.from(salt, 'hex'), 64, { N: 16384, r: 8, p: 1 });
       const ok = crypto.timingSafeEqual(derived, Buffer.from(hex, 'hex'));
-      if (!rows.length || !ok) {
+      if (rows.length !== 1 || !ok) {
         return res.status(401).json({ success: false, error: '관리자 계정 또는 비밀번호가 올바르지 않습니다.' });
       }
       const token = await createAdminSession(rows[0].user_id);
